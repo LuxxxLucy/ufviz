@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Hypergraph 3D</title>
+
+  <meta charset="utf-8">
+  <meta content='width=device-width, height=device-height, minimum-scale=1, initial-scale=1.0' name='viewport'>
+
+  <style>
+  html{ width:100%; height:100%; height: -webkit-fill-available; font-size: 10px; font-family: Verdana, Geneva, sans-serif; letter-spacing: -0.3px; }
+  body{ width: 100%; height: 100%; min-height: 100vh; min-height: -webkit-fill-available; margin: 0; padding: 0; background-color: white; color: black; line-height:1.5rem;  overflow: hidden; cursor: crosshair; text-align: left; }
+  div.controls { margin: 2px; padding: 2px; position: fixed; z-index: 3; opacity: 0.7; cursor: default; pointer-events: none; }
+  span { display: inline-block; vertical-align: top; }
+  a { cursor: pointer; pointer-events: auto; }
+  hr { display: block; height: 1px; border: 0; border-top: 1px solid #ccc; margin: 4px 0; padding: 0; }
+  #topleft { top:0; left:0; z-index: 5; }
+  #topright { top:0; right:0; text-align: left; }
+  #bottomleft { bottom:0; left:0; margin-left: 42px; }
+  #bottomright { bottom:0; right:4px; text-align: right; }
+  #paused { position: fixed; z-index: 2; top:0; left:50%; width: 120px; margin-left: -60px; text-align: center; background-color: transparent; display:none; }
+  #paused span { background-color: white; padding: 0 10px; }
+  #logo { margin: 3px; padding: 3px; position: fixed; z-index: 3; opacity: 0.7; bottom: 0; left: 0; width: 32px; height: 32px; }
+  .button { display: inline-block; margin: 1px 0; padding: 0; background-color: black; color: white; width: 32px; height: 14px; border: 1px solid black; border-radius: 3px; font-size: 8px; font-weight: bold; line-height:14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
+  .button:active { opacity: 0.2; }
+  .button-disabled { opacity: 0.2; pointer-events: none; }
+  #red { background-color: hotpink; border-color: hotpink; }
+  #blue { background-color: deepskyblue; border-color: deepskyblue; }
+  #grad { background-image: linear-gradient(to right, #00b4b4, #00b9a1, #2fbc86, #59bd66, #80bb43, #97af29, #aaa110, #bb9200, #bc7900, #bc5d00, #b93d00, #b40000); border-color: lightgrey; }
+  #stop, #reheat, #red-result-label, #blue-result-label, #grad-result-label { display: none; }
+  #cancel { float: right; margin: 0 0 0 10px; padding: 0;}
+  .text { display: inline-block; margin: 0 0 0 3px; padding: 0 5px; background-color: transparent; color: black; width: auto; line-height: 16px; font-size: 10px; font-weight: bold; text-align:left; text-transform: lowercase; vertical-align: top; }
+  .text-disabled { opacity: 0.2; }
+  .text[contenteditable="true"] { min-width: 320px; -webkit-touch-callout: text; -webkit-user-select: text; -khtml-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; opacity: 1; }
+  div.settings { margin:4px 0 15px 46px; padding:0; display: none; }
+  div.settings a { display: inline-block; color: inherit; text-decoration: inherit; pointer-events: auto; }
+  #rule-opt { display: block; margin:0 0 4px 46px; padding:0; pointer-events: none; white-space: nowrap; clear:both; }
+  #rule-opt span { display: inline-block; margin: 0 1px; padding: 0 2px; height:12px; background-color: transparent; color: grey; border: 1px solid grey; border-radius: 3px; font-size: 7px; font-weight: bold; line-height: 12px; text-align: center; vertical-align: middle; }
+  #visual { display:block; text-align: left; margin: 2px 0 0 0; width: 110px; padding:0; line-height: 10px; }
+  input[type=range] { width: 100%; margin: 0; }
+  #distance-range, #decay-range { cursor: pointer; pointer-events: auto; }
+  .option { display: inline-block; margin: 0; padding: 0 1px; height:14px; background-color: transparent; color: black;  border: 1px solid transparent; border-radius: 3px; font-size: 8px; font-weight: bold; line-height: 14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
+  .view { width: 30px }
+  .selected { border: 1px solid grey; }
+  .label { display: inline-block; line-height: 16px; font-size: 8px; font-weight: bold; text-align:left; text-transform: uppercase; color: grey; margin: 2px; min-width: 4px; }
+  .status { min-width: 38px; }
+  #grad-result { min-width: 80px; }
+  .up { position: absolute; transform: translateY(-17px); z-index: -1; }
+  .down { position: absolute; transform: translateY(15px); z-index: -1; }
+  .up:before, .down:before { content: "|"; }
+  #progress, #progress2 { position:fixed; width: 300px; height: 76px; z-index: 15; top: 40%; left: 50%; margin: 0 0 0 -150px; padding: 5px 10px; background-color: white; border: 1px solid lightgrey; box-shadow: 6px 6px 4px 1px rgba(128, 128, 128, .2); display: none; }
+  #progress span.status, #progress2 span.status { min-width: 46px; }
+  span.status:nth-child(2) { min-width: 36px !important; }
+  #progress-bar, #progress2-bar { display: inline-block; width: 250px; background-color: #e0e0e0; margin: 0; padding: 0; line-height: 16px; height: 16px; border-radius: 3px; }
+  #progress-bar-fill, #progress2-bar-fill { display: inline-block; height: 16px; background-color: #659cef; border-radius: 3px; transition: width 100ms ease-in-out; }
+  .noselect { -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+  .nodeLabelGraph3d, .linkLabelGraph3d { display: inline-block; background-color: olive; color: white; font-size: 14px; font-weight: bold; line-height: 20px; padding: 0 4px; height: auto; min-width: 14px; border-radius: 4px; text-align: center; vertical-align: middle; }
+</style>
+
+<script nomodule>alert("You browser doesn't seem to support modules. Use a modern desktop browser to run Hypergraph 3D.");</script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha256-4+XzXVhsDmqanXGHaHvgh1gMQKX40OUvDEBTu8JcmNs=" crossorigin="anonymous"></script>
+
+<script type="module">
+
+import { Simulator } from "./modules/Simulator.mjs";
+
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    var results = regex.exec(location.href);
+    return results === null ? false : decodeURIComponent(results[1].replace(/\+/g, '    '));
+}
+
+$(document).ready(function() {
+
+  // Hypergraph object and define colors, sizes and widths for different graph styles
+  // Note: use CSS to define node label style .nodeLabelGraph3d
+  const canvas = document.getElementById("3d-graph");
+  const status = document.getElementById("status");
+  const sim = new Simulator( canvas, status );
+  window.sim = sim; // TODO: REMOVE THIS AFTER DEBUGGING
+
+  // Monitor inactivity
+  let idleTimer = null;
+  const idleTimeout = 6000;
+
+  // Pause rendering cycle
+  function pause() {
+    sim.G.FG.pauseAnimation();
+    $("#paused").show();
+  }
+
+  // Resume rendering cycle
+  function resume() {
+    sim.G.FG.resumeAnimation();
+    $(".text").prop("contenteditable","false").blur();
+    $(".settings, #paused").hide();
+    $("#topleft").css("pointer-events","none");
+    if ( idleTimer ) { clearTimeout( idleTimer ); idleTimer = null; }
+  }
+
+  // Resume rendering cycle
+  function resumeTimeout() {
+    resume();
+    idleTimer = setTimeout( function() {
+      if ( !$("#paused").is(":visible") && $("#play").is(":visible") ) {
+        pause();
+      }
+    }, idleTimeout );
+  }
+
+  // Resume when controls active
+  sim.G.FG.controls().addEventListener( 'start', resume );
+  sim.G.FG.controls().addEventListener( 'end', resumeTimeout );
+
+  // Dynamics
+  function force() {
+    let distance = parseInt( $("#distance-range").val(), 10 );
+    let decay = parseInt( $("#decay-range").val(), 10 );
+    sim.G.force( distance, decay );
+    sim.G.refresh();
+    resumeTimeout();
+  }
+
+  // Window resize event, resume and update graph dimensions
+  $(window).on('resize', function(){
+    sim.G.size( $(this).width(), $(this).height() );
+    resumeTimeout();
+  });
+
+  // Paste as plain text (work-a-round)
+  document.querySelector('.text').addEventListener('paste', function (event) {
+    event.preventDefault();
+    document.execCommand('inserttext', false, event.clipboardData.getData('text/plain'));
+  });
+
+  // Open settings dialogs
+  [ "#rule"].forEach( x => {
+    $(x).on("click", function() {
+      if ( $(x+"-settings").is(":visible") ) {
+        resumeTimeout();
+      } else {
+        pause();
+        $(x+"-text").prop("contenteditable","true").focus();
+        $(x+"-settings").show();
+        $("#topleft").css("pointer-events","auto");
+      }
+    });
+  });
+
+  // Check the rule
+  $("#rule-check").on("click", function() {
+    try {
+      var rulestr = $("#rule-text")[0].innerText.split("\n").join(";").replace(/;$/g,"");
+      var validated = sim.validateRule( rulestr );
+      $("#rule-text").html( validated );
+    }
+    catch (e) {
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Run the given rule
+  $("#rule-run").on("click", function() {
+    try {
+      // parameters
+      let r = $("#rule-text")[0].innerText.split("\n").join(";").replace(/;$/g,"");
+      let i = $(".interactions.selected").toArray().reduce( (a,x) => a | $(x).data("value"), 0 );
+      let e = $(".evolution.selected").data("value");
+
+      $("#playstop, #playnext, #playprevious, #finalreheat").addClass('button-disabled');
+
+      if ( $("#stop").is(":visible") ) {
+        sim.stop();
+        $("#playstop").css("background-color","black");
+        $("#play, #stop").toggle();
+      }
+      $("#progress-bar-fill").css("width", "0");
+      $("#progress").show();
+
+      // Run rules
+      let opt = {
+        interactions: i,
+        evolution: e,
+        noduplicates: Boolean($(".noduplicates.selected").length),
+        deduplicate: Boolean($(".deduplicate.selected").length),
+        wolfram: Boolean($(".wolfram.selected").length),
+        rulendx: Boolean($(".rulendx.selected").length)
+      };
+
+      // Show options
+      $(".filtertime").removeClass("selected").first().addClass("selected");
+      $(".filterbranch").removeClass("selected");
+      if ( e === 1 ) {
+        $("#brachlike").hide();
+      } else {
+        $("#brachlike").show();
+      }
+      if ( e === 0 || e === 4 ) {
+        $(".filterbranch[data-value='4']").show();
+        $(".filterbranch[data-value='8']").show();
+      } else {
+        $(".filterbranch[data-value='4']").hide();
+        $(".filterbranch[data-value='8']").hide();
+      }
+
+      sim.run( r, opt, function(o) {
+        $("#progress-bar-fill").css("width", Math.min(100, Math.round( 100 * o.progress) )+"%" );
+        let status = "";
+        Object.keys(o).forEach( k => {
+          if ( k !== 'progress' ) {
+            status += '<span class="label down">'+k
+                      +'</span><span class="label status">'+o[k]+'</span>';
+          }
+        });
+  			$("#progress-status").html( status );
+      }, function() {
+        // Rule-opt
+        let selected = [
+          ...$(".evolution.selected").toArray(),
+          ...$(".interactions.selected").toArray(),
+          ...$(".noduplicates.selected").toArray(),
+          ...$(".deduplicate.selected").toArray(),
+          ...$(".wolfram.selected").toArray(),
+          ...$(".rulendx.selected").toArray()
+        ];
+        let opt = "";
+        selected.forEach( x => {
+          opt += "<span>" + $(x).data("label") + "</span>";
+        });
+        $("#rule-opt").html( opt );
+
+        $("#progress").hide();
+        $("#playstop, #finalreheat").removeClass('button-disabled').css("background-color","black");
+        $(".view.selected").click();
+      });
+
+    }
+    catch (e) {
+      $("#progress").hide();
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Cancel running the rule
+  $("#cancel").on("click", function() {
+    sim.cancel();
+  });
+
+  $(".background").on("click", function() { $(".background").toggleClass("selected"); } );
+
+  // View specific settings and defaults
+  let decay = new Map();
+  let distance = new Map();
+  let cameraz = new Map();
+
+  distance.set("space",20);
+  decay.set("space",70);
+  cameraz.set("space", 750 );
+
+  distance.set("time",10);
+  decay.set("time",50);
+  cameraz.set("time", 750 );
+
+  distance.set("phase",30);
+  decay.set("phase",80);
+  cameraz.set("phase", 750 );
+
+  $("#distance-range").val( distance.get( "space" ) );
+  $("#decay-range").val( decay.get("space") );
+
+  // Mode/reset
+  $(".view").on("click", function(e) {
+    // Save current settings
+    let view = $(".view.selected").data("value");
+    distance.set(view,parseInt( $("#distance-range").val(), 10 ));
+    decay.set(view,parseInt( $("#decay-range").val(), 10 ));
+    cameraz.set(view,parseInt(sim.G.FG.cameraPosition().z,10));
+
+    $(".view").removeClass("selected");
+    $(this).addClass("selected");
+
+    // Reset graph
+    view = $(this).data("value");
+    let past = Boolean( $(".past.selected").length );
+    let branches = $(".branches.selected").toArray().reduce( (a,x) => a | $(x).data("value"), 0 );
+    sim.setRefFrame( {
+      view: view,
+      leaves: !past,
+      branches: branches
+    });
+
+
+    // Restore previous settings
+    $("#distance-range").val( distance.get( view ) || 20 );
+    $("#decay-range").val( decay.get( view ) || 20 );
+    let z = cameraz.get(view) || 750;
+    sim.G.FG.cameraPosition( { x: 0, y: 0, z: z }, { x: 0, y: 0, z: 0 } );
+
+    $("#playstop").removeClass("button-disabled").css("background-color","black");
+    if ( view === 'space' ) {
+      $("#playnext").removeClass('button-disabled');
+      $("#playprevious").addClass("button-disabled");
+    } else {
+      $("#playnext, #playprevious").addClass("button-disabled");
+    }
+    $("#play, #final").show();
+    $("#stop, #reheat").hide();
+    resumeTimeout();
+  });
+
+
+  // Filter
+  $(".past").on("click", function(e) {
+    $(this).toggleClass("selected");
+    sim.setRefFrame( {
+      leaves: !$(this).hasClass("selected")
+    });
+    resumeTimeout();
+  });
+
+  $(".branches").on("click", function(e) {
+    let all = $(this).data("value") === 0;
+    if ( all ) {
+      if ( !$(this).hasClass("selected") ) {
+        $(".branches").removeClass("selected").first().addClass("selected");
+      }
+    } else {
+      $(".branches").first().removeClass("selected");
+      $(this).toggleClass("selected");
+      if ( $(".branches.selected").length === 0 ) {
+        $(".branches").first().addClass("selected");
+      }
+    }
+    let branches = $(".branches.selected").toArray().reduce( (a,x) => a | $(x).data("value"), 0 );
+    sim.setRefFrame( {
+      branches: branches
+    });
+    resumeTimeout();
+  });
+
+  // Play / stop animation
+  $("#playstop").on("click", function() {
+    try {
+      if ( $("#play").is(":visible") ) {
+        sim.play( function() { $("#finalreheat").click(); } );
+        $("#playstop").css("background-color","darkred");
+        $("#playnext, #playprevious").addClass("button-disabled");
+        $("#play, #stop").toggle();
+        force();
+        resume();
+      } else {
+        sim.stop();
+        $("#playstop").css("background-color","black");
+        if ( $(".view.selected").data("value") == 'space' ) {
+          if ( sim.pos >= sim.multiway.EV.length ) {
+            $("#playnext").addClass("button-disabled");
+          } else {
+            $("#playnext").removeClass("button-disabled");
+          }
+          if ( sim.pos > 0 ) {
+            $("#playprevious").removeClass("button-disabled");
+          } else {
+            $("#playprevious").addClass("button-disabled");
+          }
+        }
+        $("#play, #stop").toggle();
+        resumeTimeout();
+      }
+    }
+    catch(e) {
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Play next step
+  $("#playnext").on("click", function() {
+    try {
+        if ( !sim.tick() ) {
+          $("#playnext").addClass("button-disabled");
+          $("#finalreheat").click();
+        }
+        $("#playprevious").removeClass("button-disabled");
+        sim.stop();
+        resume();
+    }
+    catch(e) {
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Play previous step
+  $("#playprevious").on("click", function() {
+    try {
+        if ( !sim.tick(1, true) ) {
+          $("#playprevious").addClass("button-disabled");
+        }
+        $("#playnext").removeClass("button-disabled");
+        $("#playstop").removeClass("button-disabled").css("background-color","black");
+        $("#play, #final").show();
+        $("#stop, #reheat").hide();
+        sim.stop();
+        resume();
+    }
+    catch(e) {
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Final state
+  $("#finalreheat").on("click", function() {
+    try {
+      sim.final();
+      $("#playstop").addClass("button-disabled").css("background-color","black");
+      if ( $(".view.selected").data("value") == 'space' ) {
+        $("#playnext").addClass("button-disabled");
+        $("#playprevious").removeClass("button-disabled");
+      }
+      $("#play, #reheat").show();
+      $("#stop, #final").hide();
+      resumeTimeout();
+    }
+    catch(e) {
+      if (e instanceof RangeError || e instanceof TypeError) {
+        console.log(e.stack);
+        alert(e);
+      } else {
+        console.log(e.stack);
+        alert("Unknown error, sorry for this.");
+      }
+    }
+  });
+
+  // Changed distance/decay
+  $(document).on('input change keyup', '#distance-range,#decay-range', function() {
+    force();
+  });
+
+  // Copy URL link for the current rule to clipboard
+  $("#url").on("click", function() {
+    let rfn = (a,x) => a | $(x).data("value");
+    let i = $(".interactions.selected").toArray().reduce( rfn, 0 );
+    let e = $(".evolution.selected").data("value");
+    let v = $(".view.selected").data("value");
+    let b = $(".branches.selected").toArray().reduce( rfn, 0 );
+
+    let tfn = (s) => encodeURIComponent($(s)[0].innerText.split("\n").join(";").replace(/;$/g,"")).replace(/%2C/g,",").replace(/%3B/g,";");
+    let url = window.location.href.split('?')[0]
+      + "?rule=" + tfn("#rule-text")
+      + ( i !== 1 ? "&i=" + encodeURIComponent(i) : "" )
+      + ( e !== 1 ? "&e=" + encodeURIComponent(e) : "" )
+      + ( v !== "space" ? "&mode=" + encodeURIComponent(v) : "" )
+      + ( Boolean($(".past.selected").length) ? "p=1" : "" )
+      + ( b !== 0 ? "&b=" + encodeURIComponent(b) : "" )
+      + ( Boolean($(".noduplicates.selected").length) ? "&nd=1" : "" )
+      + ( Boolean($(".deduplicate.selected").length) ? "&dd=1" : "" )
+      + ( Boolean($(".wolfram.selected").length) ? "&wm=1" : "" )
+      + ( Boolean($(".rulendx.selected").length) ? "&ro=1" : "" )
+      + ( !$("#red-text").hasClass("text-disabled") ? "&red=" + tfn("#red-text") : "" )
+      + ( !$("#blue-text").hasClass("text-disabled") ? "&blue=" + tfn("#blue-text") : "" )
+      + ( !$("#grad-text").hasClass("text-disabled") ? "&grad=" + tfn("#grad-text") : "" );
+    var $temp = $("<input>");
+    $("body").append($temp);
+    $temp.val(url).select();
+    document.execCommand("copy");
+    $temp.remove();
+    alert( "The following URL copied to clipboard:\n\n" + url );
+  });
+
+  // Specify the initial rule and settings and run it
+  function firstrun() {
+    let tfn = (s,p,d) => {
+      let v = getUrlParameter(p);
+      $(s).html($("<p>").html(v||d).text().split(";").join("<br>") );
+    }
+    tfn("#rule-text","rule","(1,2)(1,3)->(1,2)(1,4)(2,4)(3,4)");
+    tfn("#red-text","red","nball(x,2)");
+    tfn("#blue-text","blue","geodesic(y,100)");
+    tfn("#grad-text","grad","branch");
+
+    let ofn = (p,d,s) => parseInt(getUrlParameter(p)||d) ? $("."+s).addClass("selected") :$("."+s).removeClass("selected");
+    ofn("nd",0,"noduplicates");
+    ofn("dd",0,"deduplicate");
+    ofn("wm",0,"wolfram");
+    ofn("ro",0,"rulendx");
+    ofn("p",0,"past");
+
+    let i = parseInt( getUrlParameter('i') || "1" );
+    $(".interactions").each( function() {
+      let val = $(this).data("value");
+      if ( i & $(this).data("value") ) {
+        $(this).addClass("selected");
+      } else {
+        $(this).removeClass("selected");
+      }
+    });
+    let e = getUrlParameter('e') || "1";
+    if ( $(".evolution[data-value='" + e + "']").length ) {
+      $(".evolution").removeClass("selected");
+      $(".evolution[data-value='" + e + "']").addClass("selected");
+    }
+    let view = getUrlParameter('mode') || "space";
+    $("#"+view+".view").click();
+    $("#rule-run").click();
+    let l = parseInt( getUrlParameter('l') || "0" );
+    $(".branches").removeClass("selected").each( function() {
+      let val = $(this).data("value");
+      if ( (l === val) || ( l>0 && val>0 && (l & val) ) ) {
+        $(this).addClass("selected");
+      } else {
+        $(this).removeClass("selected");
+      }
+    });
+    if ( getUrlParameter("red") ) $("#red-show").click();
+    if ( getUrlParameter("blue") ) $("#blue-show").click();
+    if ( getUrlParameter("grad") ) $("#grad-show").click();
+  }
+
+  // Autorun the first time
+  firstrun();
+
+});
+
+</script>
+</head>
+<body>
+  <div id="topleft" class="controls noselect">
+    <span title="Change rule" id ="rule" class="button">RULE</span>
+    <span id="rule-text" class="text" spellcheck="false"></span><br/>
+    <div id="rule-settings" class="settings">
+      <span title="Run rule" id ="rule-run" class="button">RUN</span>
+      <span title="Validate rule" id ="rule-check" class="button">SCAN</span>&nbsp;
+      <span class="label down">Evolution</span>
+      <span title="Singleway" class="option evolution selected" data-value="1" data-label="SINGLE">1</span>
+      <span class="label down">Interactions</span>
+      <span title="Spacelike" class="option interactions" data-value="1" data-label="SPACELIKE">SPACE</span>
+    </div>
+  </div>
+
+  <div id="topright" class="controls noselect">
+    <span id="space" title="Spatial graph" class="option view selected" data-value="space">SPACE</span>
+
+    <span title="Play/pause" id="playstop" class="button button-disabled" style="width:24px;">
+      <svg id="play" viewBox="4 0 24 16"><polygon fill="white" points="14,3 14,11 20,7"/></svg>
+      <svg id="stop" viewBox="4 0 24 14"><polygon fill="white" points="12,3 15,3 15,11 12,11"/><polygon fill="white" points="17,3 20,3 20,11 17,11"/></svg>
+    </span>
+    <span title="Previous" id="playprevious" class="button" style="width:24px;">
+		<svg id="previous" viewBox="4 0 24 16"><polygon fill="white" points="10,7 15,11 15,3"></polygon><polygon fill="white" points="18,3 20,3 20,11 18,11"></polygon></svg>
+    </span>
+    <span title="Next" id="playnext" class="button" style="width:26px;">
+      <svg id="next" viewBox="4 0 24 16"><polygon fill="white" points="17,3 17,11 22,7"></polygon><polygon fill="white" points="12,3 14,3 14,11 12,11"></polygon></svg>
+    </span>
+    <span title="End/reheat" id="finalreheat" class="button button-disabled" style="width:24px;">
+      <svg id="reheat" viewBox="4 0 24 14"><path fill="white" d="M16.1 10.2c-2 0-3-1-3.1-3S14 4 15.7 3.9c1.8-.1 2.1 1.1 2.1 1.1L16.7 6.3h4V2.5l-1.3 1C18.4 2.4 17.5 2 16 2C13 2 11 4 11 7S12.9 11.8 16 12c3.1-.3 4.2-2 4.5-4h-2.1c-.3 1.2-1 2-2.3 2.2z"/></svg>
+      <svg id="final" viewBox="4 0 24 14"><polygon fill="white" points="12,3 12,11 18,7"/><polygon fill="white" points="18,3 20,3 20,11 18,11" /></svg>
+    </span>
+    <br><br><hr>
+
+  </div>
+
+  <div id="bottomleft" class="controls noselect">
+  </div>
+
+  <div id="bottomright" class="controls noselect">
+    <span id="rule-opt"></span><br>
+    <span id="status"></span>
+  </div>
+
+  <div id="3d-graph" class="noselect"></div>
+
+  <div id="paused" class="noselect"><span class="label">Paused</span></div>
+
+  <div id="progress" class="noselect">
+    <span id="progress-label" class="label">|Rewriting</span><br>
+    <div id="progress-bar"><span id="progress-bar-fill"></span></div>
+    <span id="cancel" class="button">STOP</span><br>
+    <span id="progress-status"></span>
+  </div>
+
+</body></html>
