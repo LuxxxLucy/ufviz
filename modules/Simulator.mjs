@@ -190,52 +190,26 @@ class Simulator extends Rewriter {
 
 		let change = false;
 		let bfn = (a,x) => a | (x.id <= ev.id ? x.b :0);
-		if ( this.observer.branches ) {
-			tokens.forEach( t => {
-				let b = t.parent.reduce( bfn, 0 );
-				if ( this.observer.leaves ) {
-					b &= ~t.child.reduce( bfn, 0 );
+		tokens.forEach( t => {
+			if ( this.observer.leaves && t.child.some( x => x.id <= ev.id ) ) {
+				if ( this.G.T.has( t ) && !reverse) {
+					this.G.del(t);
+					change = true;
 				}
-				if ( b & this.observer.branches ) {
-					if ( !this.G.T.has( t ) && !reverse) {
-						this.G.add(t,1);
-						change = true;
-					} else if ( this.G.T.has( t ) && reverse ) {
-						this.G.del(t);
-						change = true;
-					}
-				} else {
-					if ( this.G.T.has( t ) && !reverse) {
-						this.G.del(t);
-						change = true;
-					} else if ( !this.G.T.has( t ) && reverse) {
-						this.G.add(t,1);
-						change = true;
-					}
+				else if ( !this.G.T.has( t ) && reverse) {
+					this.G.add(t,1);
+					change = true;
 				}
-			});
-		} else {
-			tokens.forEach( t => {
-				if ( this.observer.leaves && t.child.some( x => x.id <= ev.id ) ) {
-					if ( this.G.T.has( t ) && !reverse) {
-						this.G.del(t);
-						change = true;
-					}
-					else if ( !this.G.T.has( t ) && reverse) {
-						this.G.add(t,1);
-						change = true;
-					}
-				} else {
-					if ( !this.G.T.has( t ) && !reverse) {
-						this.G.add(t,1);
-						change = true;
-					} else if ( this.G.T.has( t ) && reverse) {
-						this.G.del(t);
-						change = true;
-					}
+			} else {
+				if ( !this.G.T.has( t ) && !reverse) {
+					this.G.add(t,1);
+					change = true;
+				} else if ( this.G.T.has( t ) && reverse) {
+					this.G.del(t);
+					change = true;
 				}
-			});
-		}
+			}
+		});
 
 		return change;
 	}
