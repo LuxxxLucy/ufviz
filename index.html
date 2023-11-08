@@ -364,7 +364,7 @@ $(document).ready(function() {
         sim.stop();
         $("#playstop").css("background-color","black");
         if ( $(".view.selected").data("value") == 'space' ) {
-          if ( sim.pos >= sim.multiway.EV.length ) {
+          if ( sim.pos >= sim.EV.length ) {
             $("#playnext").addClass("button-disabled");
           } else {
             $("#playnext").removeClass("button-disabled");
