@@ -24,7 +24,6 @@ class Graph3D extends Graph {
 		this.FG = _3dForceGraph({ rendererConfig: { antialias: true, precision: "lowp" }});
 		this.HS = []; // Array of highlighted hypersurfaces
 		this.HL = []; // Array of extra highlighted link objs
-		this.view = 1; // View, 1 = space, 2 = time
 
 		this.spaceStyles = [
 		  {  nColor: "black", lColor: "grey", nVal: 4, lWidth: 3, bgColor: "white", nRelSize: 3 }, // 0 defaults
@@ -244,16 +243,12 @@ class Graph3D extends Graph {
   }
 
   /**
-	* Reset graph and set view.
-	* @param {number} view Mode, 1 = space, 2 = time
+	* Reset graph
+	* @param {number}
 	*/
-	reset( view ) {
+	reset() {
     // Clear graph
     this.clear();
-
-    // Set view "SPACE"
-		if ( view === 1 ) {
-			this.view = 1;
 
 	    this.FG
 	      .numDimensions( 3 )
@@ -283,69 +278,6 @@ class Graph3D extends Graph {
 			this.FG.d3Force("charge").strength( -600 );
 			this.FG.d3Force("charge").distanceMin( 20 );
 			this.force(50,50);
-		} else if ( view === 2 ) { // Set view "TIME"
-			this.view = 2;
-
-			this.FG
-			.numDimensions( 3 )
-			.dagMode( "td" )
-			.backgroundColor( this.timeStyles[0].bgColor )
-			.nodeLabel( n => `<span class="nodeLabelGraph3d">${ n.id }</span>` )
-			.nodeRelSize( this.timeStyles[0].nRelSize )
-			.nodeVal( n => (n.big ? 8 : 1 ) * this.timeStyles[n.style].nVal )
-			.nodeColor( n => (n.hasOwnProperty("grad") && !n.style) ? Graph3D.colorGradient( n.grad ) : this.timeStyles[n.style].nColor )
-			.linkWidth( l => this.timeStyles[l.style].lWidth )
-			.linkColor( l => (l.hasOwnProperty("grad") && !l.style) ? Graph3D.colorGradient( l.grad ) : this.timeStyles[l.style].lColor )
-			.linkCurvature( 0 )
-			.linkCurveRotation( 0 )
-			.linkDirectionalArrowLength( 20 )
-			.linkDirectionalArrowRelPos(1)
-			.linkPositionUpdate( null )
-			.linkThreeObject( null )
-			.nodeThreeObject( null );
-
-			// Set forces
-			this.FG.d3Force("link").iterations( 2 );
-			this.FG.d3Force("link").strength( l => {
-				let refs = 4 * (Math.min(l.source.refs, l.target.refs) + 1);
-				return 1 / refs;
-			});
-			this.FG.d3Force("link").distance( 10 );
-			this.FG.d3Force("center").strength( 0.1 );
-			this.FG.d3Force("charge").strength( -200 );
-			this.FG.d3Force("charge").distanceMin( 1 );
-			this.force(50,50);
-		} else if ( view === 3 ) {
-			this.view = 3;
-
-	    this.FG
-	      .numDimensions( 3 )
-	      .dagMode( null )
-	      .backgroundColor( this.phaseStyles[0].bgColor )
-	      .nodeLabel( n => `<span class="nodeLabelGraph3d">${ n.id }</span>` )
-	      .nodeRelSize( this.phaseStyles[0].nRelSize )
-	      .nodeVal( n => (n.big ? 8 : 4 ) * n.refs  )
-	      .nodeColor( n => (n.hasOwnProperty("grad") && !n.style) ? Graph3D.colorGradient( n.grad ) : this.phaseStyles[n.style].nColor )
-	      .linkWidth( l => this.phaseStyles[l.style].lWidth )
-	      .linkColor( l => (l.hasOwnProperty("grad") && !l.style) ? Graph3D.colorGradient( l.grad ) : this.phaseStyles[l.style].lColor )
-				.linkCurvature( 0 )
-	      .linkCurveRotation( 0 )
-	      .linkDirectionalArrowLength(0)
-				.linkPositionUpdate( null )
-				.linkThreeObject( null )
-				.nodeThreeObject( null );
-
-			// Set forces
-			this.FG.d3Force("link").iterations( 15 );
-			this.FG.d3Force("link").strength( l => {
-				let refs = (Math.min(l.source.refs, l.target.refs) + (10240-l.w)/10240);
-				return 1 / refs;
-			});
-			this.FG.d3Force("link").distance( 50 );
-			this.FG.d3Force("center").strength( 1 );
-			this.FG.d3Force("charge").strength( -600 );
-			this.FG.d3Force("charge").distanceMin( 20 );
-		}
 	}
 
 
@@ -355,31 +287,12 @@ class Graph3D extends Graph {
 	* @param {number} decay Decay 0-100
 	*/
 	force( dist, decay ) {
-		if ( this.view === 1 ) {
-			if ( dist >= 0 && dist <= 100 ) {
-				this.FG.d3Force("link").distance( dist );
-				this.FG.d3Force("charge").strength( -10 * (dist + 10) );
-			}
-			if ( decay >=0 && decay <=100 ) {
-				this.FG.d3VelocityDecay( decay / 100 );
-			}
-		} else if ( this.view === 2 ){
-			if ( dist >= 0 && dist <= 100 ) {
-				this.FG.dagLevelDistance( (dist * dist) / 2 + 1 );
-				this.FG.d3Force("link").distance( dist/10 );
-				this.FG.d3Force("charge").strength( -300 );
-			}
-			if ( decay >=0 && decay <=100 ) {
-				this.FG.d3VelocityDecay( decay / 100 );
-			}
-		} else if ( this.view === 3 ) {
-			if ( dist >= 0 && dist <= 100 ) {
-				this.FG.d3Force("link").distance( dist );
-				this.FG.d3Force("charge").strength( -10 * (dist + 10) );
-			}
-			if ( decay >=0 && decay <=100 ) {
-				this.FG.d3VelocityDecay( decay / 100 );
-			}
+		if ( dist >= 0 && dist <= 100 ) {
+			this.FG.d3Force("link").distance( dist );
+			this.FG.d3Force("charge").strength( -10 * (dist + 10) );
+		}
+		if ( decay >=0 && decay <=100 ) {
+			this.FG.d3VelocityDecay( decay / 100 );
 		}
 	}
 

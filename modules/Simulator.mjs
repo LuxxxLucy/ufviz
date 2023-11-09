@@ -16,24 +16,14 @@ class Simulator {
 	*/
 	constructor(canvas,status) {
         this.EV = []; // graphs
-		this.M = []; // LHS hits as maps
 		this.reset();
         this.G = new Graph3D(canvas);
 		this.dom = status; // DOM element for status
 
-		this.maxtokenid = -1; // Max token id shown in phase view
-
-    this.pos = 0; // Event log position
+        this.pos = 0; // Event log position
 		this.playpos = 0; // Play position
 		this.playing = false; // Is play on?
 		this.stopfn = null; // stop callback function
-
-		// Observer's reference frame
-		this.observer = {
-			view: 1, // space view
-			leaves: true, // show only leaves
-			branches: 0 // show all branches
-		};
 
 		this.H = new Map(); // Highlights
 		this.F = null; // Fields
@@ -77,33 +67,14 @@ class Simulator {
 		opt = opt || {};
 
 		this.step = -1;
-		this.M.length = 0;
 		this.eventcnt = 0;
 		this.opt = {
-			evolution: 1,
-			interactions: 5,
-			timeslot: 250,
 			maxsteps: Infinity,
-			maxevents: Infinity,
-			maxtokens: Infinity,
-			noduplicates: false,
-			pathcnts: true,
-			bcoordinates: true,
-			knn: 3,
-			phasecutoff: 200,
-			deduplicate: false,
-			merge: true,
-			wolfram: false,
-			rulendx: false
 		};
 		Object.assign( this.opt, opt );
-		if ( this.opt.maxevents === Infinity &&
-				 this.opt.maxsteps === Infinity &&
-			   this.opt.maxtokens === Infinity ) {
+		if (this.opt.maxsteps === Infinity) {
 			// If no max limits set, use default limits
-			this.opt.maxsteps = 50;
-			this.opt.maxevents = (this.opt.evolution || 4) * 1000;
-			this.opt.maxtokens = 20000;
+			this.opt.maxsteps = 1000;
 		}
 
 		this.timerid = null; // Timer
@@ -161,12 +132,10 @@ class Simulator {
 			yield;
 
 			start = Date.now();
-			this.progress.matches = "" + this.M.length;
 			this.progress.events = "" + this.eventcnt;
 		} while(
 			!this.interrupt &&
-			(this.step < this.opt.maxsteps) &&
-			(this.eventcnt < this.opt.maxevents)
+			(this.step < this.opt.maxsteps)
 		);
 	}
 
@@ -200,7 +169,6 @@ class Simulator {
 
 		// Set parameters
 		this.reset( opt );
-		// this.rulial.setRule( rulestr );
 		this.progressfn = progressfn;
 		this.finishedfn = finishedfn;
 
@@ -260,43 +228,21 @@ class Simulator {
 	}
 
 	/**
-	* Set observer's reference frame
 	* @param {RefFrame} rf
 	*/
 	setRefFrame( rf ) {
-		if ( rf.hasOwnProperty("view") ) {
-			let initlen = 1;
-			this.observer.view = 1;
+		let initlen = 1;
 
-			// Stop animation and set position to start
-			this.stop();
-			this.pos = 0;
-			this.playpos = 0;
+		// Stop animation and set position to start
+		this.stop();
+		this.pos = 0;
+		this.playpos = 0;
 
-			// Reset graph
-			this.G.reset( this.observer.view );
+		// Reset graph
+		this.G.reset();
 
-			// First additions
-			this.tick( initlen );
-		}
-
-		if ( ( rf.hasOwnProperty("branches") && rf.branches !== this.observer.branches ) ||
-	 			 ( rf.hasOwnProperty("leaves") && rf.leaves !== this.observer.leaves ) ) {
-			let update = false;
-			if ( rf.hasOwnProperty("branches") ) {
-				this.observer.branches = rf.branches;
-				update = true;
-			}
-			if ( rf.hasOwnProperty("leaves") ) {
-				this.observer.leaves = rf.leaves;
-				if ( this.observer.view === 1 ) update = true;
-			}
-			if ( update ) {
-				this.processSpatialEvent( this.EV[ i ] );
-			}
-			this.refresh();
-		}
-
+		// First additions
+		this.tick( initlen );
 	}
 
 	/**
@@ -326,7 +272,7 @@ class Simulator {
 		let change = false;
 		let bfn = (a,x) => a | (x.id <= ev.id ? x.b :0);
 		tokens.forEach( t => {
-			if ( this.observer.leaves && t.child.some( x => x.id <= ev.id ) ) {
+			if ( t.child.some( x => x.id <= ev.id ) ) {
 				if ( this.G.T.has( t ) && !reverse) {
 					this.G.del(t);
 					change = true;
