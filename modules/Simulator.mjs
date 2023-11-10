@@ -2,6 +2,53 @@ import { Graph3D } from "./graph3d/Graph3D.mjs";
 import { SpriteText } from "./text/SpriteText.mjs";
 
 /**
+* @class UnionFind
+*/
+class UnionFind {
+    constructor() {
+        this.parents = {};
+    }
+
+    find(node) {
+        if (!this.parents[node]) {
+            this.parents[node] = node;
+            return node;
+        }
+
+        if (this.parents[node] === node) {
+            return node;
+        }
+
+        return this.find(this.parents[node]);
+    }
+
+    union(node1, node2) {
+        const root1 = this.find(node1);
+        const root2 = this.find(node2);
+
+        if (root1 !== root2) {
+            this.parents[root2] = root1;
+        }
+    }
+
+    getGraph() {
+        const edges = [];
+        const vertices = new Set();
+
+        for (const [node_str, parent] of Object.entries(this.parents)) {
+            let node = parseInt(node_str)
+            vertices.add(node);
+            if (node !== parent) {
+                edges.push([node, parent]);
+            }
+        }
+
+        return { vertices: Array.from(vertices), edges };
+    }
+}
+
+
+/**
 * @class User interface for Simulator
 *
 * Note: skeleton originally adopted from Mika Suominen Tuomas Sorakivi who implemented this for Hypergraph Rewrite
