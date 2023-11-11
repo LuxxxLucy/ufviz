@@ -96,7 +96,6 @@ class Simulator {
         this.AnimateGraph =
                 ForceGraph3D()
                 (document.getElementById('3d-graph'))
-                // .backgroundColor('white')
                 .numDimensions( 2 )
                 .showNavInfo( false )
                 .enablePointerInteraction( true )
@@ -147,7 +146,7 @@ class Simulator {
 		opt = opt || {};
 
         this.EV = []; // graphs
-		this.step = -1;
+		this.step = 0;
 		this.eventcnt = 0;
 		this.opt = {
 			maxsteps: Infinity,
@@ -180,7 +179,7 @@ class Simulator {
 	*prepare_computation() {
 
 		let start = Date.now();
-		this.step=0;
+        this.step = 0;
 		do {
 			// New step
 			this.step++;
@@ -189,7 +188,7 @@ class Simulator {
 
             const uf = new UnionFind();
 
-            const input = "(1,2), (1,3), (4,3), (5,4)";
+            const input = "(1,2), (1,3), (4,3), (5,4), (6,5)";
             const pairs = processUnionFindInput(input);
 
             const numberOfStep = this.step;
@@ -307,7 +306,7 @@ class Simulator {
 	* @param {RefFrame} rf
 	*/
 	setRefFrame( rf ) {
-		let initlen = 1;
+		let initlen = 0;
 
 		// Stop animation and set position to start
 		this.stop();
@@ -372,7 +371,18 @@ class Simulator {
 	*/
 	tick( steps = 1, reverse = false ) {
 		while ( steps > 0 && (( reverse && this.pos > 0) || ( !reverse && this.pos < this.EV.length))) {
-			let ev = reverse ? this.EV[ this.pos - 1 ] : this.EV[ this.pos ];
+			if (reverse) {
+				this.pos--;
+			} else {
+				this.pos++;
+			}
+            console.log("this time pos,", this.pos, "revser", reverse);
+
+            let ev = this.pos === 0 ? 
+                 {vertices:[], edges:[], uf: []} :
+			    this.EV[ this.pos - 1 ] ;
+                 
+
 			let changed = false;
 			changed = this.processSpatialEvent( ev, reverse);
 			if ( changed ) {
@@ -383,15 +393,10 @@ class Simulator {
 					this.playpos++;
 				}
 			}
-			if (reverse) {
-				this.pos--;
-			} else {
-				this.pos++;
-			}
 		}
 		this.refresh();
 
-		return reverse ? (this.pos > 1) : (this.pos < this.EV.length);
+		return reverse ? (this.pos > 0) : (this.pos < this.EV.length);
 	}
 
 	/**
@@ -444,8 +449,8 @@ class Simulator {
 	*/
 	status() {
 		return {
-            nodes:  this.EV[ this.pos-1].vertices.length,
-            edges:  this.EV[ this.pos-1].edges.length,
+            nodes: this.pos === 0 ? 0 : this.EV[ this.pos - 1 ].vertices.length,
+            edges: this.pos === 0 ? 0 : this.EV[ this.pos - 1 ].edges.length,
             events: this.pos+"/"+this.EV.length
         };
 	}
