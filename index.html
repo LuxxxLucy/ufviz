@@ -6,9 +6,19 @@
   <meta charset="utf-8">
   <meta content='width=device-width, height=device-height, minimum-scale=1, initial-scale=1.0' name='viewport'>
 
+  <script src="//unpkg.com/d3-dsv"></script>
+  <script src="//unpkg.com/dat.gui"></script>
+  <script src="//unpkg.com/d3-octree"></script>
+  <script src="//unpkg.com/d3-force-3d"></script>
+
+  <script src="//unpkg.com/3d-force-graph"></script>
+
+  <script src="//unpkg.com/three"></script>
+  <script src="//unpkg.com/three-spritetext"></script>
+
   <style>
   html{ width:100%; height:100%; height: -webkit-fill-available; font-size: 10px; font-family: Verdana, Geneva, sans-serif; letter-spacing: -0.3px; }
-  body{ width: 100%; height: 100%; min-height: 100vh; min-height: -webkit-fill-available; margin: 0; padding: 0; background-color: white; color: black; line-height:1.5rem;  overflow: hidden; cursor: crosshair; text-align: left; }
+  body{ width: 100%; height: 100%; min-height: 100vh; min-height: -webkit-fill-available; margin: 0; padding: 0; background-color: black; color: white; line-height:1.5rem;  overflow: hidden; cursor: crosshair; text-align: left; }
   div.controls { margin: 2px; padding: 2px; position: fixed; z-index: 3; opacity: 0.7; cursor: default; pointer-events: none; }
   span { display: inline-block; vertical-align: top; }
   a { cursor: pointer; pointer-events: auto; }
@@ -19,12 +29,12 @@
   #bottomright { bottom:0; right:4px; text-align: right; }
   #paused { position: fixed; z-index: 2; top:0; left:50%; width: 120px; margin-left: -60px; text-align: center; background-color: transparent; display:none; }
   #paused span { background-color: white; padding: 0 10px; }
-  .button { display: inline-block; margin: 1px 0; padding: 0; background-color: black; color: white; width: 32px; height: 14px; border: 1px solid black; border-radius: 3px; font-size: 8px; font-weight: bold; line-height:14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
+  .button { display: inline-block; margin: 1px 0; padding: 0; background-color: white; color: grey; width: 32px; height: 14px; border: 1px solid black; border-radius: 3px; font-size: 8px; font-weight: bold; line-height:14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
   .button:active { opacity: 0.2; }
   .button-disabled { opacity: 0.2; pointer-events: none; }
-  #stop, #reheat, #red-result-label, #blue-result-label, #grad-result-label { display: none; }
+  #stop, #reheat { display: none; }
   #cancel { float: right; margin: 0 0 0 10px; padding: 0;}
-  .text { display: inline-block; margin: 0 0 0 3px; padding: 0 5px; background-color: transparent; color: black; width: auto; line-height: 16px; font-size: 10px; font-weight: bold; text-align:left; text-transform: lowercase; vertical-align: top; }
+  .text { display: inline-block; margin: 0 0 0 3px; padding: 0 5px; background-color: transparent; color: white; width: auto; line-height: 16px; font-size: 10px; font-weight: bold; text-align:left; text-transform: lowercase; vertical-align: top; }
   .text-disabled { opacity: 0.2; }
   .text[contenteditable="true"] { min-width: 320px; -webkit-touch-callout: text; -webkit-user-select: text; -khtml-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; opacity: 1; }
   div.settings { margin:4px 0 15px 46px; padding:0; display: none; }
@@ -34,7 +44,7 @@
   #visual { display:block; text-align: left; margin: 2px 0 0 0; width: 110px; padding:0; line-height: 10px; }
   input[type=range] { width: 100%; margin: 0; }
   #distance-range, #decay-range { cursor: pointer; pointer-events: auto; }
-  .option { display: inline-block; margin: 0; padding: 0 1px; height:14px; background-color: transparent; color: black;  border: 1px solid transparent; border-radius: 3px; font-size: 8px; font-weight: bold; line-height: 14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
+  .option { display: inline-block; margin: 0; padding: 0 1px; height:14px; background-color: transparent; color: white;  border: 1px solid transparent; border-radius: 3px; font-size: 8px; font-weight: bold; line-height: 14px; text-align: center; vertical-align: middle; cursor: pointer; pointer-events: auto; }
   .view { width: 30px }
   .selected { border: 1px solid grey; }
   .label { display: inline-block; line-height: 16px; font-size: 8px; font-weight: bold; text-align:left; text-transform: uppercase; color: grey; margin: 2px; min-width: 4px; }
@@ -62,7 +72,7 @@ import { Simulator } from "./modules/Simulator.mjs";
 $(document).ready(function() {
 
   // Note: use CSS to define node label style .nodeLabelGraph3d
-  const canvas = document.getElementById("3d-graph");
+  const canvas = document.getElementById('3d-graph');
   const status = document.getElementById("status");
   const sim = new Simulator( canvas, status );
   window.sim = sim; // TODO: REMOVE THIS AFTER DEBUGGING
@@ -73,13 +83,13 @@ $(document).ready(function() {
 
   // Pause rendering cycle
   function pause() {
-    sim.G.FG.pauseAnimation();
+    sim.AnimateGraph.pauseAnimation();
     $("#paused").show();
   }
 
   // Resume rendering cycle
   function resume() {
-    sim.G.FG.resumeAnimation();
+    sim.AnimateGraph.resumeAnimation();
     $(".text").prop("contenteditable","false").blur();
     $(".settings, #paused").hide();
     $("#topleft").css("pointer-events","none");
@@ -96,22 +106,17 @@ $(document).ready(function() {
     }, idleTimeout );
   }
 
-  // Resume when controls active
-  sim.G.FG.controls().addEventListener( 'start', resume );
-  sim.G.FG.controls().addEventListener( 'end', resumeTimeout );
-
   // Dynamics
   function force() {
     let distance = parseInt( $("#distance-range").val(), 10 );
     let decay = parseInt( $("#decay-range").val(), 10 );
-    sim.G.force( distance, decay );
-    sim.G.refresh();
     resumeTimeout();
   }
 
   // Window resize event, resume and update graph dimensions
   $(window).on('resize', function(){
-    sim.G.size( $(this).width(), $(this).height() );
+    sim.AnimateGraph.width($(this).width());
+    sim.AnimateGraph.height($(this).height());
     resumeTimeout();
   });
 
@@ -164,7 +169,7 @@ $(document).ready(function() {
 
       if ( $("#stop").is(":visible") ) {
         sim.stop();
-        $("#playstop").css("background-color","black");
+        $("#playstop").css("background-color","white");
         $("#play, #stop").toggle();
       }
       $("#progress-bar-fill").css("width", "0");
@@ -172,7 +177,7 @@ $(document).ready(function() {
 
       // Run rules
       let opt = {
-        maxsteps: 10
+        maxsteps: 5
       };
 
       // Show options
@@ -191,10 +196,9 @@ $(document).ready(function() {
       }, function() {
 
         $("#progress").hide();
-        $("#playstop, #finalreheat").removeClass('button-disabled').css("background-color","black");
+        $("#playstop, #finalreheat").removeClass('button-disabled').css("background-color","white");
         $(".view.selected").click();
       });
-
     }
     catch (e) {
       $("#progress").hide();
@@ -236,9 +240,9 @@ $(document).ready(function() {
     $("#distance-range").val( 20 );
     $("#decay-range").val( 70 );
     let z = 350;
-    sim.G.FG.cameraPosition( { x: 0, y: 0, z: z }, { x: 0, y: 0, z: 0 } );
+    sim.AnimateGraph.cameraPosition( { x: -5, y: -5, z: z }, { x: 0, y: 0, z: 0 } );
 
-    $("#playstop").removeClass("button-disabled").css("background-color","black");
+    $("#playstop").removeClass("button-disabled").css("background-color","white");
     $("#playnext").removeClass('button-disabled');
     $("#playprevious").addClass("button-disabled");
     $("#play, #final").show();
@@ -254,11 +258,10 @@ $(document).ready(function() {
         $("#playstop").css("background-color","darkred");
         $("#playnext, #playprevious").addClass("button-disabled");
         $("#play, #stop").toggle();
-        force();
         resume();
       } else {
         sim.stop();
-        $("#playstop").css("background-color","black");
+        $("#playstop").css("background-color","white");
           if ( sim.pos >= sim.EV.length ) {
             $("#playnext").addClass("button-disabled");
           } else {
@@ -313,7 +316,7 @@ $(document).ready(function() {
           $("#playprevious").addClass("button-disabled");
         }
         $("#playnext").removeClass("button-disabled");
-        $("#playstop").removeClass("button-disabled").css("background-color","black");
+        $("#playstop").removeClass("button-disabled").css("background-color","white");
         $("#play, #final").show();
         $("#stop, #reheat").hide();
         sim.stop();
@@ -334,7 +337,7 @@ $(document).ready(function() {
   $("#finalreheat").on("click", function() {
     try {
       sim.final();
-      $("#playstop").addClass("button-disabled").css("background-color","black");
+      $("#playstop").addClass("button-disabled").css("background-color","white");
       $("#playnext").addClass("button-disabled");
       $("#playprevious").removeClass("button-disabled");
       $("#play, #reheat").show();
@@ -393,21 +396,21 @@ $(document).ready(function() {
   </div>
 
   <div id="topright" class="controls noselect">
-     <span id="" title="" class="option view selected" data-value="">Refresh</span>
+     <span id="" title="" class="option view selected" data-value="">Reset</span>
 
     <span title="Play/pause" id="playstop" class="button button-disabled" style="width:24px;">
-      <svg id="play" viewBox="4 0 24 16"><polygon fill="white" points="14,3 14,11 20,7"/></svg>
-      <svg id="stop" viewBox="4 0 24 14"><polygon fill="white" points="12,3 15,3 15,11 12,11"/><polygon fill="white" points="17,3 20,3 20,11 17,11"/></svg>
+      <svg id="play" viewBox="4 0 24 16"><polygon fill="black" points="14,3 14,11 20,7"/></svg>
+      <svg id="stop" viewBox="4 0 24 14"><polygon fill="black" points="12,3 15,3 15,11 12,11"/><polygon fill="black" points="17,3 20,3 20,11 17,11"/></svg>
     </span>
     <span title="Previous" id="playprevious" class="button" style="width:24px;">
-        <svg id="previous" viewBox="4 0 24 16"><polygon fill="white" points="10,7 15,11 15,3"></polygon><polygon fill="white" points="18,3 20,3 20,11 18,11"></polygon></svg>
+        <svg id="previous" viewBox="4 0 24 16"><polygon fill="black" points="10,7 15,11 15,3"></polygon><polygon fill="black" points="18,3 20,3 20,11 18,11"></polygon></svg>
     </span>
     <span title="Next" id="playnext" class="button" style="width:26px;">
-      <svg id="next" viewBox="4 0 24 16"><polygon fill="white" points="17,3 17,11 22,7"></polygon><polygon fill="white" points="12,3 14,3 14,11 12,11"></polygon></svg>
+      <svg id="next" viewBox="4 0 24 16"><polygon fill="black" points="17,3 17,11 22,7"></polygon><polygon fill="black" points="12,3 14,3 14,11 12,11"></polygon></svg>
     </span>
     <span title="End/reheat" id="finalreheat" class="button button-disabled" style="width:24px;">
-      <svg id="reheat" viewBox="4 0 24 14"><path fill="white" d="M16.1 10.2c-2 0-3-1-3.1-3S14 4 15.7 3.9c1.8-.1 2.1 1.1 2.1 1.1L16.7 6.3h4V2.5l-1.3 1C18.4 2.4 17.5 2 16 2C13 2 11 4 11 7S12.9 11.8 16 12c3.1-.3 4.2-2 4.5-4h-2.1c-.3 1.2-1 2-2.3 2.2z"/></svg>
-      <svg id="final" viewBox="4 0 24 14"><polygon fill="white" points="12,3 12,11 18,7"/><polygon fill="white" points="18,3 20,3 20,11 18,11" /></svg>
+      <svg id="reheat" viewBox="4 0 24 14"><path fill="black" d="M16.1 10.2c-2 0-3-1-3.1-3S14 4 15.7 3.9c1.8-.1 2.1 1.1 2.1 1.1L16.7 6.3h4V2.5l-1.3 1C18.4 2.4 17.5 2 16 2C13 2 11 4 11 7S12.9 11.8 16 12c3.1-.3 4.2-2 4.5-4h-2.1c-.3 1.2-1 2-2.3 2.2z"/></svg>
+      <svg id="final" viewBox="4 0 24 14"><polygon fill="black" points="12,3 12,11 18,7"/><polygon fill="black" points="18,3 20,3 20,11 18,11" /></svg>
     </span>
     <br><br><hr>
 

@@ -1,5 +1,3 @@
-import { Graph3D } from "./graph3d/Graph3D.mjs";
-import { SpriteText } from "./text/SpriteText.mjs";
 
 /**
 * @class UnionFind
@@ -20,6 +18,13 @@ class UnionFind {
         }
 
         return this.find(this.parents[node]);
+    }
+
+    get_depth(node) {
+        if (!this.parents[node] || this.parents[node] === node) {
+            return 0;
+        }
+        return this.get_depth(this.parents[node]) + 1;
     }
 
     union(node1, node2) {
@@ -43,10 +48,34 @@ class UnionFind {
             }
         }
 
-        return { vertices: Array.from(vertices), edges };
+        return { vertices: Array.from(vertices), edges , uf: this};
     }
 }
 
+function processUnionFindInput(input) {
+    const pairRegex = /\((\d+),(\d+)\)/g;
+    let match;
+    let pairs = [];
+
+    while ((match = pairRegex.exec(input)) !== null) {
+        const node1 = parseInt(match[1], 10);
+        const node2 = parseInt(match[2], 10);
+
+        // Validate the pair
+        if (isNaN(node1) || isNaN(node2)) {
+            return 'Error: Invalid input';
+        }
+
+        // Add to pairs list
+        pairs.push([node1, node2]);
+    }
+
+    if (pairs.length === 0) {
+        return 'Error: No valid pairs found';
+    }
+
+    return pairs;
+}
 
 /**
 * @class User interface for Simulator
@@ -64,7 +93,38 @@ class Simulator {
 	constructor(canvas,status) {
         this.EV = []; // graphs
 		this.reset();
-        this.G = new Graph3D(canvas);
+
+        this.AnimateGraph =
+                ForceGraph3D()
+                (document.getElementById('3d-graph'))
+                // .backgroundColor('white')
+                .numDimensions( 2 )
+                .showNavInfo( false )
+                .enablePointerInteraction( true )
+                .dagMode('bu') // bottom-up
+                .dagLevelDistance(30)
+
+                .linkDirectionalArrowLength(10.5)
+                .linkDirectionalArrowRelPos(1)
+                .linkCurvature(0.25)
+                .linkWidth(3)
+                .linkColor("grey")
+                .linkCurvature('curvature')
+                .linkCurveRotation('rotation')
+                .linkDirectionalParticles(2)
+                .linkDirectionalParticleWidth(0.8)
+                .linkDirectionalParticleSpeed(0.006)
+
+                .nodeOpacity(1)
+                .nodeThreeObject(node => {
+                    const sprite = new SpriteText(node.id);
+                    sprite.material.depthWrite = false; // make sprite background transparent
+                    sprite.color = "white";
+                    sprite.textHeight = 8;
+                    return sprite;
+                })
+                .graphData({nodes: [], links: []})
+
 		this.dom = status; // DOM element for status
 
         this.pos = 0; // Event log position
@@ -78,32 +138,6 @@ class Simulator {
 		// Variables x and y
 		this.x = 0;
 		this.y = 0;
-		this.G.FG
-			.onNodeClick( Simulator.onNodeClick.bind(this) )
-			.onNodeRightClick( Simulator.onNodeRightClick.bind(this) )
-			.nodeThreeObjectExtend( true );
-	}
-
-	/**
-	* Click on node, set x
-	* @param {Object} n Node object
-	* @param {Object} event Event object
-	*/
-	static onNodeClick( n, event) {
-		this.x = n.id;
-		this.G.FG.nodeThreeObject( Simulator.nodeThreeObject.bind(this) );
-		this.refresh();
-	}
-
-	/**
-	* Right click on node, set y
-	* @param {Object} n Node object
-	* @param {Object} event Event object
-	*/
-	static onNodeRightClick( n, event) {
-		this.y = n.id;
-		this.G.FG.nodeThreeObject( Simulator.nodeThreeObject.bind(this) );
-		this.refresh();
 	}
 
 	/**
@@ -152,30 +186,24 @@ class Simulator {
 			this.progress.step = "" + this.step;
 			this.progress.matches = "" + 0;
 
-		    let t0 = {
-		    	id: 0,
-		    	parent: [],
-		    	child: [],
-                edge: []
-		    };
-		    let t1 = {
-		    	id: 1,
-		    	parent: [],
-		    	child: [],
-                edge: [0,1,2]
-		    };
-		    let t2 = {
-		    	id: 1,
-		    	parent: [],
-		    	child: [],
-                edge: []
-		    };
-            t0.child.push(t1);
-            t1.parent.push(t0);
-            t1.child.push(t2);
-            t2.parent.push(t1);
-            // this.multiway.EV.push(t0);
-            this.EV.push(t0);
+            const uf = new UnionFind();
+
+            const input = "(1,2), (1,3), (4,3), (5,4)";
+            const pairs = processUnionFindInput(input);
+
+            const numberOfStep = this.step;
+            
+            if (Array.isArray(pairs)) {
+                // Iterate only over the first 'numberOfStep' pairs
+                for (let i = 0; i < Math.min(numberOfStep, pairs.length); i++) {
+                    uf.union(pairs[i][0], pairs[i][1]);
+                }
+            } else {
+                console.error(pairs); // Log error message if the input is invalid
+            }
+    
+            const graph = uf.getGraph();
+            this.EV.push(graph);
 			yield;
 
 			start = Date.now();
@@ -285,8 +313,8 @@ class Simulator {
 		this.pos = 0;
 		this.playpos = 0;
 
-		// Reset graph
-		this.G.reset();
+		// Reset step
+		this.step=0;
 
 		// First additions
 		this.tick( initlen );
@@ -304,7 +332,6 @@ class Simulator {
 			});
 			this.dom.innerHTML = str;
 		}
-		this.G.refresh(); // Refresh graph
 	}
 
 	/**
@@ -314,31 +341,25 @@ class Simulator {
 	* @return {boolean} True, if some was made
 	*/
 	processSpatialEvent( ev, reverse = false ) {
-		const tokens = [ ...ev.child, ...ev.parent ];
-
-		let change = false;
-		let bfn = (a,x) => a | (x.id <= ev.id ? x.b :0);
-		tokens.forEach( t => {
-			if ( t.child.some( x => x.id <= ev.id ) ) {
-				if ( this.G.T.has( t ) && !reverse) {
-					this.G.del(t);
-					change = true;
-				}
-				else if ( !this.G.T.has( t ) && reverse) {
-					this.G.add(t,1);
-					change = true;
-				}
-			} else {
-				if ( !this.G.T.has( t ) && !reverse) {
-					this.G.add(t,1);
-					change = true;
-				} else if ( this.G.T.has( t ) && reverse) {
-					this.G.del(t);
-					change = true;
-				}
-			}
-		});
-
+        let gData =
+            {
+            nodes: ev.vertices.map(i => ({ id: i }))
+            ,
+            links: ev.edges.map(
+                (a,b) => ({
+                    source: a[0],
+                    target: a[1],
+                    target_node: {
+                        ID: a[1],
+                        level: ev.uf.get_depth(a[1])
+                    }
+                })
+            )
+        };
+        let change = true;
+        this.AnimateGraph
+                .graphData(gData)
+        ;
 		return change;
 	}
 
@@ -395,7 +416,6 @@ class Simulator {
 	* @param {stopcallbackfn} stopcallbackfn Animation stopped callback function
 	*/
 	play( stopcallbackfn = null ) {
-		this.G.FG.enablePointerInteraction( false );
 		this.stopfn = stopcallbackfn;
 		this.playpos = 0;
 		this.playing = true;
@@ -407,7 +427,6 @@ class Simulator {
 	*/
 	stop() {
 		this.playing = false;
-		this.G.FG.enablePointerInteraction( true );
 	}
 
 	/**
@@ -415,8 +434,6 @@ class Simulator {
 	*/
 	final() {
 		this.stop();
-		this.G.force(-1,10);
-		// this.tick( this.multiway.EV.length );
 		this.tick( this.EV.length );
 	}
 
@@ -425,9 +442,12 @@ class Simulator {
 	* @return {Object} Status of the Multiway3D.
 	*/
 	status() {
-		return { ...this.G.status(), events: this.pos+"/"+this.EV.length };
+		return {
+            nodes:  this.EV[ this.pos-1].vertices.length,
+            edges:  this.EV[ this.pos-1].edges.length,
+            events: this.pos+"/"+this.EV.length
+        };
 	}
-
 }
 
 export { Simulator };
