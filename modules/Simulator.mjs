@@ -91,7 +91,6 @@ class Simulator {
 	* @constructor
 	*/
 	constructor(canvas,status) {
-        this.EV = []; // graphs
 		this.reset();
 
         this.AnimateGraph =
@@ -147,6 +146,7 @@ class Simulator {
 	reset( opt = null ) {
 		opt = opt || {};
 
+        this.EV = []; // graphs
 		this.step = -1;
 		this.eventcnt = 0;
 		this.opt = {
@@ -180,6 +180,7 @@ class Simulator {
 	*prepare_computation() {
 
 		let start = Date.now();
+		this.step=0;
 		do {
 			// New step
 			this.step++;
