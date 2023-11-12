@@ -328,6 +328,10 @@ class Simulator {
         this.stop();
         this.pos = 0;
         this.playpos = 0;
+        this.AnimateGraph.graphData({
+                nodes: [],
+                links: []
+            });
 
         // Reset step
         this.step = 0;
