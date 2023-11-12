@@ -357,24 +357,82 @@ class Simulator {
      * @return {boolean} True, if some was made
      */
     processSpatialEvent(ev, reverse = false) {
-        let gData = {
-            nodes: ev.vertices.map(i => ({
-                id: i
-            })),
-            links: ev.edges.map(
+        let normal_edges = 
+            ev.edges.map(
                 (a, b) => ({
                     source: a[0],
                     target: a[1],
                     target_node: {
                         ID: a[1],
                         level: ev.uf.get_depth(a[1])
-                    }
+                    },
+                    color: "white",
                 })
-            )
+            );
+        let gData = {
+            nodes: ev.vertices.map(i => ({
+                id: i
+            })),
+            links:  [ ...normal_edges ]
         };
         let change = true;
+        let { nodes, links } = this.AnimateGraph.graphData();
+
+        // remove nodes that no longer exist
+        for (let i = 0; i < nodes.length; i++) {
+            let n = nodes[i];
+            let find = false;
+            for (const n_ of gData.nodes) {
+                if (n_.id === n.id) {
+                    find = true;
+                }
+            }
+            if (!find) {
+                nodes.splice(i, 1);
+            }
+        }
+        // add new nodes
+        for (const n of gData.nodes) {
+            let find = false;
+            for (const n_ of nodes) {
+                if (n_.id === n.id) {
+                    find = true;
+                }
+            }
+            if (!find) {
+                nodes.push(n);
+            }
+        }
+        // remove edges that no longer exist
+        for (let i = 0; i < links.length; i++) {
+            let e = links[i];
+            let find = false;
+            for (const e_ of gData.links) {
+                if (e_.source === e.source && e_.target == e.target) {
+                    find = true;
+                }
+            }
+            if (!find) {
+                links.splice(i, 1);
+            }
+        }
+        // add new edges
+        for (const e of gData.links) {
+            let find = false;
+            for (const e_ of links) {
+                if (e_.source === e.source && e_.target == e.target) {
+                    find = true;
+                }
+            }
+            if (!find) {
+                links.push(e);
+            }
+        }
+
         this.AnimateGraph
-            .graphData(gData);
+            .linkAutoColorBy(d => d.color)
+            .graphData({nodes: nodes, links: links});
+
         return change;
     }
 
