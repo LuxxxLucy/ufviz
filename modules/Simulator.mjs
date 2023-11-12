@@ -31,7 +31,7 @@ class UnionFind {
         const root2 = this.find(node2);
 
         if (root1 !== root2) {
-            this.parents[root2] = root1;
+            this.parents[root1] = root2;
         }
     }
 
@@ -108,8 +108,9 @@ class Simulator {
             .linkDirectionalArrowLength(10.5)
             .linkDirectionalArrowRelPos(1)
             .linkCurvature(0.25)
-            .linkWidth(3)
-            .linkColor("grey")
+            .linkWidth(2)
+            .linkColor("white")
+            .linkOpacity(0.6)
             .linkCurvature('curvature')
             .linkCurveRotation('rotation')
             .linkDirectionalParticles(2)
@@ -124,10 +125,16 @@ class Simulator {
                 sprite.textHeight = 8;
                 return sprite;
             })
-            .graphData({
+            .d3Force('center', null)
+            .forceEngine("d3");
+        this.AnimateGraph.d3Force('charge').strength(-50);
+        this.AnimateGraph.d3Force('link').distance(15);
+        // this.AnimateGraph.d3VelocityDecay(0.9);
+        this.AnimateGraph.graphData({
                 nodes: [],
                 links: []
-            })
+            });
+
 
         this.dom = status; // DOM element for status
 
@@ -194,7 +201,7 @@ class Simulator {
 
             const uf = new UnionFind();
 
-            const input = "(1,2), (1,3), (4,3), (5,4), (6,5)";
+            const input = "(1,8), (7,2), (3,13), (7,1), (6,7), (9,5),(9,3),(14,11),(10,4),(12,9),(4,11),(10,7)";
             const pairs = processUnionFindInput(input);
 
             const numberOfStep = this.step;
@@ -207,6 +214,7 @@ class Simulator {
             } else {
                 console.error(pairs); // Log error message if the input is invalid
             }
+            const x = "(1,2), (1,3), (4,3), (5,4), (6,5)";
 
             const graph = uf.getGraph();
             this.EV.push(graph);
