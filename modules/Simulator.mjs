@@ -4,6 +4,7 @@
 class UnionFind {
     constructor() {
         this.parents = {};
+        this.parents_link_info = {}
     }
 
     find(node) {
@@ -32,6 +33,10 @@ class UnionFind {
 
         if (root1 !== root2) {
             this.parents[root1] = root2;
+            this.parents_link_info[root1] = {
+                    union_pair_1: node1,
+                    union_pair_2: node2
+            };
         }
     }
 
@@ -43,7 +48,8 @@ class UnionFind {
             let node = parseInt(node_str)
             vertices.add(node);
             if (node !== parent) {
-                edges.push([node, parent]);
+                let info = this.parents_link_info[node];
+                edges.push([node, parent, info.union_pair_1, info.union_pair_2]);
             }
         }
 
@@ -125,10 +131,26 @@ class Simulator {
                 sprite.textHeight = 8;
                 return sprite;
             })
+            .linkThreeObjectExtend(true)
+            .linkThreeObject(link => {
+                // add text for the link information
+                const sprite = new SpriteText(`(${link.union_pair_1} == ${link.union_pair_2})`);
+                sprite.color = 'yellow';
+                sprite.textHeight = 5;
+                return sprite;
+            })
+            .linkPositionUpdate((sprite, { start, end }) => {
+                // Position sprite
+                const middlePos = Object.assign(...['x', 'y', 'z'].map(c => ({
+                  [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
+                })));
+                middlePos.z = 8;
+                Object.assign(sprite.position, middlePos);
+            })
             .d3Force('center', null)
             .forceEngine("d3");
-        this.AnimateGraph.d3Force('charge').strength(-50);
-        this.AnimateGraph.d3Force('link').distance(15);
+        this.AnimateGraph.d3Force('charge').strength(-80);
+        this.AnimateGraph.d3Force('link').distance(25);
         // this.AnimateGraph.d3VelocityDecay(0.9);
         this.AnimateGraph.graphData({
                 nodes: [],
@@ -226,6 +248,28 @@ class Simulator {
             !this.interrupt &&
             (this.step < this.opt.maxsteps)
         );
+
+        if (this.step >= this.build_steps) {
+            const uf = new UnionFind();
+
+            const numberOfStep = this.build_steps;
+
+            if (Array.isArray(pairs)) {
+                // Iterate only over the first 'numberOfStep' pairs
+                for (let i = 0; i < Math.min(numberOfStep, pairs.length); i++) {
+                    uf.union(pairs[i][0], pairs[i][1]);
+                }
+            } else {
+                console.error(pairs); // Log error message if the input is invalid
+            }
+            const graph = uf.getGraph();
+            // run explain, and get the edge out.
+            // annotate the edge with color. and create a new copy of the graph
+            // where is the original graph plus with new highlighted color edges.
+            for (let i = 0 ; i < 5 ; i++) {
+                this.EV.push(graph);
+            }
+        }
     }
 
     /**
@@ -371,6 +415,8 @@ class Simulator {
                         level: ev.uf.get_depth(a[1])
                     },
                     color: "white",
+                    union_pair_1: a[2],
+                    union_pair_2: a[3],
                 })
             );
         let gData = {
