@@ -213,8 +213,15 @@ class Simulator {
      */
     * prepare_computation() {
 
+
+        const input = "(1,8), (7,2), (3,13), (7,1), (6,7), (9,5),(9,3),(14,11),(10,4),(12,9),(4,11),(10,7)";
+        const pairs = processUnionFindInput(input);
+
         let start = Date.now();
         this.step = 0;
+
+        this.build_steps = pairs.length;
+
         do {
             // New step
             this.step++;
@@ -222,9 +229,6 @@ class Simulator {
             this.progress.matches = "" + 0;
 
             const uf = new UnionFind();
-
-            const input = "(1,8), (7,2), (3,13), (7,1), (6,7), (9,5),(9,3),(14,11),(10,4),(12,9),(4,11),(10,7)";
-            const pairs = processUnionFindInput(input);
 
             const numberOfStep = this.step;
 
@@ -236,8 +240,6 @@ class Simulator {
             } else {
                 console.error(pairs); // Log error message if the input is invalid
             }
-            const x = "(1,2), (1,3), (4,3), (5,4), (6,5)";
-
             const graph = uf.getGraph();
             this.EV.push(graph);
             yield;
@@ -246,7 +248,7 @@ class Simulator {
             this.progress.events = "" + this.eventcnt;
         } while (
             !this.interrupt &&
-            (this.step < this.opt.maxsteps)
+            (this.step < this.build_steps)
         );
 
         if (this.step >= this.build_steps) {
@@ -284,7 +286,7 @@ class Simulator {
             }
         } else {
             if (this.progressfn) {
-                this.progress.progress = this.progress.step / this.opt.maxsteps;
+                this.progress.progress = this.progress.step / this.build_steps;
                 this.progressfn(this.progress);
             }
             this.timerid = setTimeout(this.timer.bind(this), this.rewritedelay, g);
