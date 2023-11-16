@@ -1,3 +1,27 @@
+
+function edge_equal(e1, e2) {
+    if (
+        ( e1[0] === e2[0] && e1[1] === e2[1])
+        ||
+        ( e1[1] === e2[0] && e1[0] === e2[1])
+    ) {
+        return true;
+    } else {
+        return false
+    }
+}
+
+function edges_contain(edge_list, e) {
+    let find = false;
+    for (let i = 0; i < edge_list.length; i++) {
+        let e_ = edge_list[i];
+        if (edge_equal(e_, e)) {
+            find = true;
+        }
+    }
+    return find;
+}
+
 /**
  * @class UnionFind
  */
@@ -5,6 +29,9 @@ class UnionFind {
     constructor() {
         this.parents = {};
         this.parents_link_info = {}
+
+        this.union_sequence = []; // a list of all union operations
+        this.union_ids = {};
     }
 
     find(node) {
@@ -27,9 +54,54 @@ class UnionFind {
         return this.get_depth(this.parents[node]) + 1;
     }
 
+    get_parent(node) {
+        return this.parents[node];
+    }
+
+    get_path_to_node(node, node_target) {
+        let ret = [];
+
+        let t = node;
+        while (t!=node_target) {
+            let parent = this.parents[t];
+            ret.push([t, parent]);
+            t = parent;
+        }
+
+        return ret;
+    }
+
+    get_path_to_root(node) {
+        let root = this.find(node);
+        return this.get_path_to_node(node, root);
+    }
+
+    get_first_common_ancestor(node1, node2) {
+        let node1_to_root_path = this.get_path_to_root(node1);
+        let node2_to_root_path = this.get_path_to_root(node2);
+        
+        let n1_idx = node1_to_root_path.length - 1;
+        let n2_idx = node2_to_root_path.length - 1;
+        while (
+            n1_idx >= 0 && n2_idx >= 0 &&
+            edge_equal(node1_to_root_path[n1_idx], node2_to_root_path[n2_idx])
+        ) {
+            n1_idx --;
+            n2_idx --;
+        }
+
+        if (n1_idx >= 0) {
+            return node1_to_root_path[n1_idx][1];
+        } else {
+            return node2_to_root_path[n2_idx][1];
+        }
+    }
+
     union(node1, node2) {
         const root1 = this.find(node1);
         const root2 = this.find(node2);
+
+        this.union_sequence.push([node1, node2])
 
         if (root1 !== root2) {
             this.parents[root1] = root2;
@@ -37,7 +109,57 @@ class UnionFind {
                     union_pair_1: node1,
                     union_pair_2: node2
             };
+            this.union_ids[root1] = this.union_sequence.length - 1;
         }
+
+    }
+
+    explain(node1, node2) {
+        let result = [];
+
+        let first_common_ancestor = this.get_first_common_ancestor(node1, node2);
+        let node1_to_common_ancestor_path = this.get_path_to_node(node1, first_common_ancestor);
+        let node2_to_common_ancestor_path = this.get_path_to_node(node2, first_common_ancestor);
+        let path = node1_to_common_ancestor_path.concat(node2_to_common_ancestor_path);
+
+        let newest_union_idx = 0;
+        let this_edge = [];
+        for (let i = 0; i < path.length; i++) {
+            let idx = this.union_ids[path[i][0]];
+            if (idx > newest_union_idx) {
+                newest_union_idx = idx
+                this_edge = path[i];
+            }
+        }
+
+        let exp = this.union_sequence[newest_union_idx];
+        let node1_t = exp[0];
+        let node2_t = exp[1];
+
+        if (edge_equal([node1_t, node2_t], [node1, node2])) {
+            return [node1, node2];
+        } else {
+            // run two recursive call
+            // join the explanations
+            let node1_explanation = [];
+            let node2_explanation = [];
+            let this_exp = [];
+            if (edges_contain(node2_to_common_ancestor_path, this_edge)) {
+                node1_explanation = this.explain(node1, node2_t);
+                node2_explanation = this.explain(node1_t, node2);
+                this_exp = [node2_t, node1_t];
+            } else if (edges_contain(node1_to_common_ancestor_path, this_edge)) {
+                node1_explanation = this.explain(node1, node1_t);
+                node2_explanation = this.explain(node2_t, node2);
+                this_exp = [node1_t, node2_t];
+            } else {
+                console.log("unexpected: does not exist in the path of 1 or 2 to root");
+            }
+
+            result = result.concat(node1_explanation, this_exp, node2_explanation);
+        }
+
+        return result;
     }
 
     getGraph() {
