@@ -114,13 +114,21 @@ class UnionFind {
 
     }
 
+    explain_with_logs(node1, node2) {
+        /* explain but with the intermediate steps as logs
+         * really not good-looking code...
+         */
+        this.logs = []
+        return [this.explain(node1, node2), this.logs]
+    }
+
     explain(node1, node2) {
         let result = [];
 
         let first_common_ancestor = this.get_first_common_ancestor(node1, node2);
         let node1_to_common_ancestor_path = this.get_path_to_node(node1, first_common_ancestor);
         let node2_to_common_ancestor_path = this.get_path_to_node(node2, first_common_ancestor);
-        let path = node1_to_common_ancestor_path.concat(node2_to_common_ancestor_path);
+        let path = node1_to_common_ancestor_path.concat(node2_to_common_ancestor_path.reverse());
 
         let newest_union_idx = 0;
         let this_edge = [];
@@ -135,6 +143,11 @@ class UnionFind {
         let exp = this.union_sequence[newest_union_idx];
         let node1_t = exp[0];
         let node2_t = exp[1];
+
+        this.logs.push({
+            path_s2t: path,
+            selected_edge: this_edge
+        });
 
         if (edge_equal([node1_t, node2_t], [node1, node2])) {
             return [node1, node2];
