@@ -184,7 +184,7 @@ class UnionFind {
             vertices.add(node);
             if (node !== parent) {
                 let info = this.parents_link_info[node];
-                edges.push([node, parent, info.union_pair_1, info.union_pair_2]);
+                edges.push([node, parent, info.union_pair_1, info.union_pair_2, "white"]);
             }
         }
 
@@ -250,7 +250,6 @@ class Simulator {
             .linkDirectionalArrowRelPos(1)
             .linkCurvature(0.25)
             .linkWidth(2)
-            .linkColor("white")
             .linkOpacity(0.6)
             .linkCurvature('curvature')
             .linkCurveRotation('rotation')
@@ -399,13 +398,39 @@ class Simulator {
             } else {
                 console.error(pairs); // Log error message if the input is invalid
             }
-            const graph = uf.getGraph();
+
+            let [explanations, ret_logs] = uf.explain_with_logs(1,4);
+
             // run explain, and get the edge out.
             // annotate the edge with color. and create a new copy of the graph
             // where is the original graph plus with new highlighted color edges.
-            for (let i = 0 ; i < 5 ; i++) {
-                this.EV.push(graph);
+            for (let i = 0 ; i < ret_logs.length ; i++) {
+                let log = ret_logs[i];
+
+                {
+                    let graph = uf.getGraph();
+                    let path = log["path_s2t"];
+
+                    for ( const [s,t] of path) {
+                        let info = uf.parents_link_info[s];
+                        let e = [s, t, info.union_pair_1, info.union_pair_2, "blue"];
+                        graph.edges.push(e)
+                    }
+                    this.EV.push(graph);
+                }
+
+                {
+                    let graph = uf.getGraph();
+                    let selected_edge = log["selected_edge"];
+                    let [s,t] = selected_edge;
+                    let info = uf.parents_link_info[s];
+                    let e = [s, t, info.union_pair_1, info.union_pair_2, "yellow"];
+                    graph.edges.push(e)
+                    this.EV.push(graph);
+                }
             }
+
+
         }
     }
 
@@ -551,9 +576,9 @@ class Simulator {
                         ID: a[1],
                         level: ev.uf.get_depth(a[1])
                     },
-                    color: "white",
                     union_pair_1: a[2],
                     union_pair_2: a[3],
+                    color: a[4],
                 })
             );
         let gData = {
@@ -595,7 +620,10 @@ class Simulator {
             let e = links[i];
             let find = false;
             for (const e_ of gData.links) {
-                if (e_.source === e.source && e_.target == e.target) {
+                if (e_.source === e.source &&
+                    e_.target == e.target &&
+                    e_.color === e.color
+                ) {
                     find = true;
                 }
             }
@@ -607,7 +635,10 @@ class Simulator {
         for (const e of gData.links) {
             let find = false;
             for (const e_ of links) {
-                if (e_.source === e.source && e_.target == e.target) {
+                if (e_.source === e.source &&
+                    e_.target == e.target &&
+                    e_.color === e.color
+                ) {
                     find = true;
                 }
             }
