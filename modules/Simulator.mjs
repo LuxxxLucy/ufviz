@@ -196,6 +196,53 @@ class UnionFind {
     }
 }
 
+class TweakUnionFind extends UnionFind {
+
+    union(node1, node2) {
+        const root1 = this.find(node1);
+        const root2 = this.find(node2);
+
+        this.union_sequence.push([node1, node2])
+
+        if (root1 !== root2) {
+
+            // reverse the edges from node1 to root1
+            let tmp_node = node1;
+            let tmp_node_parent = this.parents[tmp_node];
+
+            while (tmp_node_parent !== tmp_node) {
+                let parent_of_parent = this.parents[tmp_node_parent];
+                this.parents[tmp_node_parent] = tmp_node;
+                this.parents_link_info[tmp_node_parent] = this.parents_link_info[tmp_node];
+                tmp_node = tmp_node_parent;
+                tmp_node_parent = parent_of_parent
+            }
+
+            this.parents[node1] = node2;
+            this.parents_link_info[node1] = {
+                    union_pair_1: node1,
+                    union_pair_2: node2
+            };
+            this.union_ids[root1] = this.union_sequence.length - 1;
+
+        }
+    }
+
+    explain(node1, node2) {
+        let result = [];
+
+        let first_common_ancestor = this.get_first_common_ancestor(node1, node2);
+        let node1_to_common_ancestor_path = this.get_path_to_node(node1, first_common_ancestor);
+        let node2_to_common_ancestor_path = this.get_path_to_node(node2, first_common_ancestor);
+        let path = node1_to_common_ancestor_path.concat(node2_to_common_ancestor_path.reverse());
+
+        this.logs.push({
+            path_s2t: path,
+        });
+        return path;
+    }
+}
+
 function processUnionFindInput(input) {
     const pairRegex = /\((\d+),(\d+)\)/g;
     let match;
@@ -419,7 +466,7 @@ class Simulator {
                     this.EV.push(graph);
                 }
 
-                {
+                if ('selected_edge' in log) {
                     let graph = uf.getGraph();
                     let selected_edge = log["selected_edge"];
                     let [s,t] = selected_edge;
