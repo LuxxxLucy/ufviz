@@ -301,29 +301,26 @@ class Simulator {
             .linkCurvature(0)
             .linkCurveRotation(0)
             .linkWidth(3)
-            .linkOpacity(0.9)
+            .linkOpacity(0.6)
             .linkDirectionalParticles(2)
             .linkDirectionalParticleWidth(0.8)
             .linkDirectionalParticleSpeed(0.006)
-
-            .nodeOpacity(0.9)
-            .nodeThreeObject(node => {
-                const sprite = new SpriteText(node.id);
-                sprite.material.depthWrite = false; // make sprite background transparent
-                sprite.color = "black";
-                sprite.textHeight = 8;
-                return sprite;
-            })
-            .nodeVal(4)
-            .nodeRelSize(3)
-
 
             .linkThreeObjectExtend(true)
             .linkThreeObject(link => {
                 // add text for the link information
                 const sprite = new SpriteText(`(${link.union_pair_1} == ${link.union_pair_2})`);
-                sprite.color = 'black';
-                sprite.textHeight = 5;
+                sprite.textHeight = 2;
+
+                sprite.color = 'orange';
+                sprite.backgroundColor = 'rgba(0,0,190,0.6)';
+                sprite.borderColor = 'lightgrey';
+                sprite.borderWidth = 0.5;
+                sprite.borderRadius = 3;
+                sprite.padding = [6, 2];
+                sprite.position.x = 45;
+                sprite.position.y = 15;
+
                 return sprite;
             })
             .linkPositionUpdate((sprite, { start, end }) => {
@@ -334,13 +331,32 @@ class Simulator {
                 middlePos.z = 8;
                 Object.assign(sprite.position, middlePos);
             })
+
+            .nodeOpacity(1)
+            .nodeThreeObject(node => {
+                const sprite = new SpriteText(node.id);
+                sprite.material.depthWrite = true;
+                sprite.color = "blue";
+                sprite.textHeight = 5;
+
+                sprite.backgroundColor = 'orange';
+                sprite.borderColor = 'lightgrey';
+                sprite.borderWidth = 0.5;
+                sprite.borderRadius = 3;
+                sprite.padding = [6, 2];
+                sprite.position.z = 8;
+                return sprite;
+            })
+            .nodeVal(4)
+            .nodeRelSize(3)
+
             .forceEngine("d3");
 
         this.AnimateGraph.d3Force('link').iterations(2);
-        this.AnimateGraph.d3Force('link').distance(10);
+        this.AnimateGraph.d3Force('link').distance(20);
         this.AnimateGraph.d3Force('center').strength(0.1);
         this.AnimateGraph.d3Force('charge').strength(-200);
-        this.AnimateGraph.d3Force('charge').distanceMin(1);
+        this.AnimateGraph.d3Force('charge').distanceMin(50);
         this.AnimateGraph.d3VelocityDecay(0.8);
         this.AnimateGraph.graphData({
                 nodes: [],
@@ -649,65 +665,40 @@ class Simulator {
         let { nodes, links } = this.AnimateGraph.graphData();
 
         // remove nodes that no longer exist
-        for (let i = 0; i < nodes.length; i++) {
-            let n = nodes[i];
-            let find = false;
-            for (const n_ of gData.nodes) {
-                if (n_.id === n.id) {
-                    find = true;
+        if (gData.nodes.length > 0) {
+            for (let i = 0; i < nodes.length; i++) {
+                let n = nodes[i];
+                let find = false;
+                for (const n_ of gData.nodes) {
+                    if (n_.id === n.id) {
+                        find = true;
+                    }
+                }
+                if (!find) {
+                    nodes.splice(i, 1);
                 }
             }
-            if (!find) {
-                nodes.splice(i, 1);
-            }
-        }
-        // add new nodes
-        for (const n of gData.nodes) {
-            let find = false;
-            for (const n_ of nodes) {
-                if (n_.id === n.id) {
-                    find = true;
+
+            // add new nodes
+            for (const n of gData.nodes) {
+                let find = false;
+                for (const n_ of nodes) {
+                    if (n_.id === n.id) {
+                        find = true;
+                    }
+                }
+                if (!find) {
+                    nodes.push(n);
                 }
             }
-            if (!find) {
-                nodes.push(n);
-            }
+        } else {
+            nodes = [];
         }
-        // remove edges that no longer exist
-        for (let i = 0; i < links.length; i++) {
-            let e = links[i];
-            let find = false;
-            for (const e_ of gData.links) {
-                if (e_.source === e.source &&
-                    e_.target == e.target &&
-                    e_.color === e.color
-                ) {
-                    find = true;
-                }
-            }
-            if (!find) {
-                links.splice(i, 1);
-            }
-        }
-        // add new edges
-        for (const e of gData.links) {
-            let find = false;
-            for (const e_ of links) {
-                if (e_.source === e.source &&
-                    e_.target == e.target &&
-                    e_.color === e.color
-                ) {
-                    find = true;
-                }
-            }
-            if (!find) {
-                links.push(e);
-            }
-        }
+
 
         this.AnimateGraph
             .linkAutoColorBy(d => d.color)
-            .graphData({nodes: nodes, links: links});
+            .graphData({nodes: nodes, links: gData.links});
 
         return change;
     }
@@ -725,7 +716,6 @@ class Simulator {
             } else {
                 this.pos++;
             }
-            console.log("this time pos,", this.pos, "revser", reverse);
 
             let ev = this.pos === 0 ? {
                     vertices: [],
