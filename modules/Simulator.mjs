@@ -184,7 +184,7 @@ class UnionFind {
             vertices.add(node);
             if (node !== parent) {
                 let info = this.parents_link_info[node];
-                edges.push([node, parent, info.union_pair_1, info.union_pair_2, "white"]);
+                edges.push([node, parent, info.union_pair_1, info.union_pair_2, "grey"]);
             }
         }
 
@@ -291,32 +291,38 @@ class Simulator {
             .showNavInfo(false)
             .enablePointerInteraction(true)
             .dagMode('bu') // bottom-up
+            .cooldownTime(5000)
             .dagLevelDistance(30)
 
-            .linkDirectionalArrowLength(10.5)
+            .backgroundColor('white')
+
+            .linkDirectionalArrowLength(3)
             .linkDirectionalArrowRelPos(1)
-            .linkCurvature(0.25)
-            .linkWidth(2)
-            .linkOpacity(0.6)
-            .linkCurvature('curvature')
-            .linkCurveRotation('rotation')
+            .linkCurvature(0)
+            .linkCurveRotation(0)
+            .linkWidth(3)
+            .linkOpacity(0.9)
             .linkDirectionalParticles(2)
             .linkDirectionalParticleWidth(0.8)
             .linkDirectionalParticleSpeed(0.006)
 
-            .nodeOpacity(1)
+            .nodeOpacity(0.9)
             .nodeThreeObject(node => {
                 const sprite = new SpriteText(node.id);
                 sprite.material.depthWrite = false; // make sprite background transparent
-                sprite.color = "white";
+                sprite.color = "black";
                 sprite.textHeight = 8;
                 return sprite;
             })
+            .nodeVal(4)
+            .nodeRelSize(3)
+
+
             .linkThreeObjectExtend(true)
             .linkThreeObject(link => {
                 // add text for the link information
                 const sprite = new SpriteText(`(${link.union_pair_1} == ${link.union_pair_2})`);
-                sprite.color = 'yellow';
+                sprite.color = 'black';
                 sprite.textHeight = 5;
                 return sprite;
             })
@@ -328,11 +334,14 @@ class Simulator {
                 middlePos.z = 8;
                 Object.assign(sprite.position, middlePos);
             })
-            .d3Force('center', null)
             .forceEngine("d3");
-        this.AnimateGraph.d3Force('charge').strength(-80);
-        this.AnimateGraph.d3Force('link').distance(25);
-        // this.AnimateGraph.d3VelocityDecay(0.9);
+
+        this.AnimateGraph.d3Force('link').iterations(2);
+        this.AnimateGraph.d3Force('link').distance(10);
+        this.AnimateGraph.d3Force('center').strength(0.1);
+        this.AnimateGraph.d3Force('charge').strength(-200);
+        this.AnimateGraph.d3Force('charge').distanceMin(1);
+        this.AnimateGraph.d3VelocityDecay(0.8);
         this.AnimateGraph.graphData({
                 nodes: [],
                 links: []
@@ -409,7 +418,8 @@ class Simulator {
             this.progress.step = "" + this.step;
             this.progress.matches = "" + 0;
 
-            const uf = new UnionFind();
+            // const uf = new UnionFind();
+            const uf = new TweakUnionFind();
 
             const numberOfStep = this.step;
 
@@ -433,7 +443,8 @@ class Simulator {
         );
 
         if (this.step >= this.build_steps) {
-            const uf = new UnionFind();
+            // const uf = new UnionFind();
+            const uf = new TweakUnionFind();
 
             const numberOfStep = this.build_steps;
 
