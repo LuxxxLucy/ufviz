@@ -397,6 +397,7 @@ class Simulator {
             // If no max limits set, use default limits
             this.opt.maxsteps = 1000;
         }
+        this.mode = parseInt(this.opt.mode);
 
         this.timerid = null; // Timer
         this.rewritedelay = 50; // Timer delay in msec
@@ -434,8 +435,12 @@ class Simulator {
             this.progress.step = "" + this.step;
             this.progress.matches = "" + 0;
 
-            // const uf = new UnionFind();
-            const uf = new TweakUnionFind();
+            let uf = [];
+            if (this.mode === 1) {
+                uf = new UnionFind();
+            } else {
+                uf = new TweakUnionFind();
+            }
 
             const numberOfStep = this.step;
 
@@ -459,8 +464,12 @@ class Simulator {
         );
 
         if (this.step >= this.build_steps) {
-            // const uf = new UnionFind();
-            const uf = new TweakUnionFind();
+            let uf = [];
+            if (this.mode === 1) {
+                uf = new UnionFind();
+            } else {
+                uf = new TweakUnionFind();
+            }
 
             const numberOfStep = this.build_steps;
 
@@ -478,6 +487,7 @@ class Simulator {
             // run explain, and get the edge out.
             // annotate the edge with color. and create a new copy of the graph
             // where is the original graph plus with new highlighted color edges.
+            let already_selected_edges = [];
             for (let i = 0 ; i < ret_logs.length ; i++) {
                 let log = ret_logs[i];
 
@@ -490,21 +500,29 @@ class Simulator {
                         let e = [s, t, info.union_pair_1, info.union_pair_2, "blue"];
                         graph.edges.push(e)
                     }
+
+                    for ( const e of already_selected_edges) {
+                        graph.edges.push(e)
+                    }
+
                     this.EV.push(graph);
                 }
 
                 if ('selected_edge' in log) {
-                    let graph = uf.getGraph();
                     let selected_edge = log["selected_edge"];
                     let [s,t] = selected_edge;
                     let info = uf.parents_link_info[s];
                     let e = [s, t, info.union_pair_1, info.union_pair_2, "yellow"];
-                    graph.edges.push(e)
+                    already_selected_edges.push(e)
+
+                    let graph = uf.getGraph();
+                    for ( const e of already_selected_edges) {
+                        graph.edges.push(e)
+                    }
                     this.EV.push(graph);
                 }
+                
             }
-
-
         }
     }
 
@@ -603,6 +621,7 @@ class Simulator {
      */
     setRefFrame(rf) {
         let initlen = 0;
+
 
         // Stop animation and set position to start
         this.stop();

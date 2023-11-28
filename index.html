@@ -88,21 +88,6 @@
         right: 4px;
         text-align: right;
       }
-      #paused {
-        position: fixed;
-        z-index: 2;
-        top: 0;
-        left: 50%;
-        width: 120px;
-        margin-left: -60px;
-        text-align: center;
-        background-color: transparent;
-        display: none;
-      }
-      #paused span {
-        background-color: white;
-        padding: 0 10px;
-      }
       .button {
         display: inline-block;
         margin: 1px 0;
@@ -167,7 +152,6 @@
       div.settings {
         margin: 4px 0 15px 46px;
         padding: 0;
-        display: none;
       }
       div.settings a {
         display: inline-block;
@@ -231,9 +215,6 @@
         vertical-align: middle;
         cursor: pointer;
         pointer-events: auto;
-      }
-      .view {
-        width: 30px;
       }
       .selected {
         border: 1px solid grey;
@@ -348,14 +329,12 @@
         // Pause rendering cycle
         function pause() {
           sim.AnimateGraph.pauseAnimation();
-          $("#paused").show();
         }
 
         // Resume rendering cycle
         function resume() {
           sim.AnimateGraph.resumeAnimation();
           $(".text").prop("contenteditable", "false").blur();
-          $(".settings, #paused").hide();
           $("#topleft").css("pointer-events", "none");
           if (idleTimer) {
             clearTimeout(idleTimer);
@@ -366,11 +345,6 @@
         // Resume rendering cycle
         function resumeTimeout() {
           resume();
-          idleTimer = setTimeout(function () {
-            if (!$("#paused").is(":visible") && $("#play").is(":visible")) {
-              pause();
-            }
-          }, idleTimeout);
         }
 
         // Dynamics
@@ -399,21 +373,11 @@
             );
           });
 
-        // Open settings dialogs
-        ["#rule"].forEach((x) => {
-          $(x).on("click", function () {
-            if ($(x + "-settings").is(":visible")) {
-              resumeTimeout();
-            } else {
-              pause();
-              $(x + "-text")
-                .prop("contenteditable", "true")
-                .focus();
-              $(x + "-settings").show();
-              $("#topleft").css("pointer-events", "auto");
-            }
-          });
-        });
+        $("rule-text")
+            .prop("contenteditable", "true")
+            .focus();
+        $("rule-settings").show();
+        $("#topleft").css("pointer-events", "auto");
 
         // Check the rule
         $("#rule-check").on("click", function () {
@@ -443,7 +407,7 @@
               .innerText.split("\n")
               .join(";")
               .replace(/;$/g, "");
-            let i = $(".interactions.selected")
+            let i = $(".mode.selected")
               .toArray()
               .reduce((a, x) => a | $(x).data("value"), 0);
 
@@ -461,6 +425,7 @@
 
             // Run rules
             let opt = {
+              mode: i,
               maxsteps: 100000,
             };
 
@@ -496,7 +461,7 @@
                 $("#playstop, #finalreheat")
                   .removeClass("button-disabled")
                   .css("background-color", "white");
-                $(".view.selected").click();
+                $(".mode.selected").click();
               }
             );
           } catch (e) {
@@ -529,10 +494,11 @@
         $("#decay-range").val(decay.get("space"));
 
         // Mode/reset
-        $(".view").on("click", function (e) {
-          $(".view").removeClass("selected");
+        $(".mode").on("click", function (e) {
+          $(".mode").removeClass("selected");
           $(this).addClass("selected");
 
+          let mode = $(this).data("value");
           // Reset graph
           sim.setRefFrame({});
 
@@ -692,7 +658,10 @@
                 .join("<br>")
             );
           };
-          tfn("#rule-text", "rule", "(1,2)(1,3)->(1,2)(1,4)(2,4)(3,4)");
+          tfn("#rule-text","rule",
+            "(1,8), (7,2), (3,13), (7,1), (6,7), (9,5),(9,3),(14,11),(10,4),(12,9),(4,11),(10,7)"
+          );
+
 
           $("#rule-run").click();
         }
@@ -708,79 +677,78 @@
       <span id="rule-text" class="text" spellcheck="false"></span><br />
       <div id="rule-settings" class="settings">
         <span title="Run rule" id="rule-run" class="button">RUN</span>
-        <span title="Validate rule" id="rule-check" class="button">SCAN</span
-        >&nbsp;
-        <span class="label down">Interactions</span>
+        &nbsp;
+
+        <span class="label down">Mode</span>
+        <span title="Classifical Union Find" class="option mode selected" data-value="1" data-label="SPACELIKE">UF1</span>
+        <span title="Tweak Union Find" class="option mode" data-value="2" data-label="TIMELIKE">UF2</span>
       </div>
-    </div>
 
-    <div id="topright" class="controls noselect">
-      <span id="" title="" class="option view selected" data-value=""
-        >Reset</span
-      >
+      <div class="controls noselect">
+        <span id="rule-opt"></span><br />
+        <span id="status"></span>
+      </div>
 
-      <span
-        title="Play/pause"
-        id="playstop"
-        class="button button-disabled"
-        style="width: 24px"
-      >
-        <svg id="play" viewBox="4 0 24 16">
-          <polygon fill="black" points="14,3 14,11 20,7" />
-        </svg>
-        <svg id="stop" viewBox="4 0 24 14">
-          <polygon fill="black" points="12,3 15,3 15,11 12,11" />
-          <polygon fill="black" points="17,3 20,3 20,11 17,11" />
-        </svg>
-      </span>
-      <span
-        title="Previous"
-        id="playprevious"
-        class="button"
-        style="width: 24px"
-      >
-        <svg id="previous" viewBox="4 0 24 16">
-          <polygon fill="black" points="10,7 15,11 15,3"></polygon>
-          <polygon fill="black" points="18,3 20,3 20,11 18,11"></polygon>
-        </svg>
-      </span>
-      <span title="Next" id="playnext" class="button" style="width: 26px">
-        <svg id="next" viewBox="4 0 24 16">
-          <polygon fill="black" points="17,3 17,11 22,7"></polygon>
-          <polygon fill="black" points="12,3 14,3 14,11 12,11"></polygon>
-        </svg>
-      </span>
-      <span
-        title="End/reheat"
-        id="finalreheat"
-        class="button button-disabled"
-        style="width: 24px"
-      >
-        <svg id="reheat" viewBox="4 0 24 14">
-          <path
-            fill="black"
-            d="M16.1 10.2c-2 0-3-1-3.1-3S14 4 15.7 3.9c1.8-.1 2.1 1.1 2.1 1.1L16.7 6.3h4V2.5l-1.3 1C18.4 2.4 17.5 2 16 2C13 2 11 4 11 7S12.9 11.8 16 12c3.1-.3 4.2-2 4.5-4h-2.1c-.3 1.2-1 2-2.3 2.2z"
-          />
-        </svg>
-        <svg id="final" viewBox="4 0 24 14">
-          <polygon fill="black" points="12,3 12,11 18,7" />
-          <polygon fill="black" points="18,3 20,3 20,11 18,11" />
-        </svg>
-      </span>
-      <br /><br />
-      <hr />
-    </div>
+      <br/><br/>
+      <br/><br/>
 
-    <div id="bottomleft" class="controls noselect"></div>
+      <div class="controls noselect">
 
-    <div id="bottomright" class="controls noselect">
-      <span id="rule-opt"></span><br />
-      <span id="status"></span>
+        <span
+          title="Play/pause"
+          id="playstop"
+          class="button button-disabled"
+          style="width: 24px"
+        >
+          <svg id="play" viewBox="4 0 24 16">
+            <polygon fill="black" points="14,3 14,11 20,7" />
+          </svg>
+          <svg id="stop" viewBox="4 0 24 14">
+            <polygon fill="black" points="12,3 15,3 15,11 12,11" />
+            <polygon fill="black" points="17,3 20,3 20,11 17,11" />
+          </svg>
+        </span>
+        <span
+          title="Previous"
+          id="playprevious"
+          class="button"
+          style="width: 24px"
+        >
+          <svg id="previous" viewBox="4 0 24 16">
+            <polygon fill="black" points="10,7 15,11 15,3"></polygon>
+            <polygon fill="black" points="18,3 20,3 20,11 18,11"></polygon>
+          </svg>
+        </span>
+        <span title="Next" id="playnext" class="button" style="width: 26px">
+          <svg id="next" viewBox="4 0 24 16">
+            <polygon fill="black" points="17,3 17,11 22,7"></polygon>
+            <polygon fill="black" points="12,3 14,3 14,11 12,11"></polygon>
+          </svg>
+        </span>
+        <span
+          title="End/reheat"
+          id="finalreheat"
+          class="button button-disabled"
+          style="width: 24px"
+        >
+          <svg id="reheat" viewBox="4 0 24 14">
+            <path
+              fill="black"
+              d="M16.1 10.2c-2 0-3-1-3.1-3S14 4 15.7 3.9c1.8-.1 2.1 1.1 2.1 1.1L16.7 6.3h4V2.5l-1.3 1C18.4 2.4 17.5 2 16 2C13 2 11 4 11 7S12.9 11.8 16 12c3.1-.3 4.2-2 4.5-4h-2.1c-.3 1.2-1 2-2.3 2.2z"
+            />
+          </svg>
+          <svg id="final" viewBox="4 0 24 14">
+            <polygon fill="black" points="12,3 12,11 18,7" />
+            <polygon fill="black" points="18,3 20,3 20,11 18,11" />
+          </svg>
+        </span>
+        <br /><br />
+        <hr />
+      </div>
+
     </div>
 
     <div id="3d-graph" class="noselect"></div>
-
-    <div id="paused" class="noselect"><span class="label">Paused</span></div>
 
     <div id="progress" class="noselect">
       <span id="progress-label" class="label">|Prepare the computation</span
