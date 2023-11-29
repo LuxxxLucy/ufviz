@@ -30,6 +30,7 @@
         letter-spacing: -0.3px;
       }
       body {
+        font-family: 'Arial', sans-serif;
         width: 100%;
         height: 100%;
         min-height: 100vh;
@@ -43,6 +44,31 @@
         cursor: crosshair;
         text-align: left;
       }
+       .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        width: 50%;
+        max-width: 600px;
+        padding-bottom: 50px;
+        margin-bottom: 30px;
+      }
+
+      .button-run {
+        margin: 2px;
+        padding: 2px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 5px 5px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 8px;
+        margin-bottom: 5px;
+        width: 60%;
+      }
+
       div.controls {
         margin: 2px;
         padding: 2px;
@@ -50,7 +76,11 @@
         z-index: 3;
         opacity: 0.7;
         cursor: default;
-        pointer-events: none;
+      }
+      .edit-span {
+          display:block;
+          width:150px;
+          word-wrap:break-word;
       }
       span {
         display: inline-block;
@@ -140,7 +170,7 @@
         opacity: 0.2;
       }
       .text[contenteditable="true"] {
-        min-width: 320px;
+        min-width: 150px;
         -webkit-touch-callout: text;
         -webkit-user-select: text;
         -khtml-user-select: text;
@@ -161,7 +191,7 @@
       }
       #rule-opt {
         display: block;
-        margin: 0 0 4px 46px;
+        margin: 0 0 4px 2px;
         padding: 0;
         pointer-events: none;
         white-space: nowrap;
@@ -200,24 +230,24 @@
         pointer-events: auto;
       }
       .option {
-        display: inline-block;
-        margin: 0;
-        padding: 0 1px;
-        height: 14px;
+        height: 9px;
         background-color: transparent;
         color: black;
         border: 1px solid transparent;
         border-radius: 3px;
-        font-size: 8px;
-        font-weight: bold;
         line-height: 14px;
         text-align: center;
         vertical-align: middle;
+        padding: 5px 5px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        background: none;
         cursor: pointer;
-        pointer-events: auto;
+        font-size: 8px;
       }
       .selected {
         border: 1px solid grey;
+        background: #007BFF;
       }
       .label {
         display: inline-block;
@@ -334,8 +364,6 @@
         // Resume rendering cycle
         function resume() {
           sim.AnimateGraph.resumeAnimation();
-          $(".text").prop("contenteditable", "false").blur();
-          $("#topleft").css("pointer-events", "none");
           if (idleTimer) {
             clearTimeout(idleTimer);
             idleTimer = null;
@@ -494,7 +522,7 @@
         $("#decay-range").val(decay.get("space"));
 
         // Mode/reset
-        $(".mode").on("click", function (e) {
+        $("#reheat").on("click", function (e) {
           $(".mode").removeClass("selected");
           $(this).addClass("selected");
 
@@ -614,7 +642,7 @@
               .css("background-color", "black");
             $("#playnext").addClass("button-disabled");
             $("#playprevious").removeClass("button-disabled");
-            $("#play, #reheat").show();
+            $("#play").show();
             $("#stop, #final").hide();
             resumeTimeout();
           } catch (e) {
@@ -668,30 +696,34 @@
 
         // Autorun the first time
         firstrun();
+
       });
     </script>
   </head>
   <body>
-    <div id="topleft" class="controls noselect">
-      <span title="Change rule" id="rule" class="button">RULE</span>
-      <span id="rule-text" class="text" spellcheck="false"></span><br />
-      <div id="rule-settings" class="settings">
-        <span title="Run rule" id="rule-run" class="button">RUN</span>
-        &nbsp;
+    <div id="topleft" class="controls">
 
-        <span class="label down">Mode</span>
-        <span title="Classifical Union Find" class="option mode selected" data-value="1" data-label="SPACELIKE">UF1</span>
-        <span title="Tweak Union Find" class="option mode" data-value="2" data-label="TIMELIKE">UF2</span>
-      </div>
+      <div class="container">
 
-      <div class="controls noselect">
-        <span id="rule-opt"></span><br />
-        <span id="status"></span>
-      </div>
+      <span class="label">Input the Merge Sequences here:</span>
+      <span id="rule-text" class="text" style="width:30px;" spellcheck="false" contenteditable="true"></span><br />
+
+      <br/>
+      <span class="label">Choose Mode:</span>
+      <br/>
+        <span class="label down">choosing Union Find</span>
+        <span title="Classifical Union Find" class="option mode selected" data-value="1">Classic Union Find</span>
+        <span title="Tweak Union Find" class="option mode" data-value="2">Tweaked Union Find</span>
+      <br/>
+
+      <br/>
+      <span class="label">Click to run algorithm</span>
+      <br/>
+      <button title="Run rule" id="rule-run" class="button-run">RUN</button>
+
 
       <br/><br/>
-      <br/><br/>
-
+      <span class="label">Control</span>
       <div class="controls noselect">
 
         <span
@@ -743,9 +775,15 @@
           </svg>
         </span>
         <br /><br />
-        <hr />
+      </div>
+      <br/>
+      <br/><br/>
+      <div class="controls noselect">
+        <span id="rule-opt"></span><br />
+        <span id="status"></span>
       </div>
 
+      </div>
     </div>
 
     <div id="3d-graph" class="noselect"></div>
