@@ -1,6 +1,6 @@
-# Union Find Explain visual
+# Explain
 
-This repo implements and visualizes the Explain algorithm from <Proof-producing Congruence Closure> Nieuwenhuis, R., & Oliveras, A. (2005, April).  
+This repo implements and visualizes the $O(klog n)$ $k$-step proof producing algorithm *Explain* using a classical union find; and a $O(k)$ variant using a tweaked union find. (<Proof-producing Congruence Closure> Nieuwenhuis, R., & Oliveras, A. (2005, April) ).
 
 
 ## Notes on implementation
