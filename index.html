@@ -521,6 +521,15 @@
         $("#distance-range").val(distance.get("space"));
         $("#decay-range").val(decay.get("space"));
 
+        // Single-options
+        [ "mode"].forEach( x => {
+          $("."+x).on("click", function() {
+            $(".mode").removeClass("selected");
+             $(this).toggleClass("selected");
+          sim.setRefFrame({});
+          } );
+        });
+
         // Mode/reset
         $("#reheat").on("click", function (e) {
           $(".mode").removeClass("selected");
