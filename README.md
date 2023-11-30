@@ -1,5 +1,8 @@
 # Union Find Explain visual
 
+This repo implements and visualizes the Explain algorithm from <Proof-producing Congruence Closure> Nieuwenhuis, R., & Oliveras, A. (2005, April).  
+
+
 ## Notes on implementation
 
 The implementation itself starts from  
